@@ -15,14 +15,14 @@
 
 // Configuration for API and Mock Environment
 const API_CONFIG = {
-  // Toggle this to false when connecting to your live Express backend
-  USE_MOCK_DATA: true,
+  // Connected to live Express backend
+  USE_MOCK_DATA: false,
 
   // Target API endpoint for Express server (GET /api/books)
-  API_BASE_URL: 'http://localhost:5000/api',
+  API_BASE_URL: 'http://localhost:3000/api',
 
-  // Simulated delay in milliseconds (to preview the realistic loading state)
-  SIMULATED_DELAY_MS: 500,
+  // Simulated delay in milliseconds (for test buttons)
+  SIMULATED_DELAY_MS: 400,
 
   // Demo simulation flags (can also be triggered via the UI buttons)
   forceError: false,
@@ -112,30 +112,27 @@ const MOCK_BOOKS = [
  * @returns {Promise<Array>} Array of book records
  */
 async function fetchBooks() {
-  // If mock mode is active, simulate an asynchronous network request
-  if (API_CONFIG.USE_MOCK_DATA) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // If developer/tester enabled simulated error
-        if (API_CONFIG.forceError) {
-          reject(new Error("Simulated Server Error: Database connection failed (HTTP 500)"));
-          return;
-        }
-
-        // If developer/tester enabled simulated empty response
-        if (API_CONFIG.forceEmpty) {
-          resolve([]);
-          return;
-        }
-
-        // Normal mock response: deep copy of MOCK_BOOKS
-        resolve(JSON.parse(JSON.stringify(MOCK_BOOKS)));
-      }, API_CONFIG.SIMULATED_DELAY_MS);
+  // Support UI state preview buttons if triggered
+  if (API_CONFIG.forceError) {
+    return new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Simulated Server Error: Database connection failed (HTTP 500)")), API_CONFIG.SIMULATED_DELAY_MS);
     });
   }
 
-  // --- Real Express API Integration ---
-  // When you build the backend later, this block will fetch directly from GET /api/books:
+  if (API_CONFIG.forceEmpty) {
+    return new Promise((resolve) => {
+      setTimeout(() => resolve([]), API_CONFIG.SIMULATED_DELAY_MS);
+    });
+  }
+
+  // If mock mode is explicitly turned back on
+  if (API_CONFIG.USE_MOCK_DATA) {
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(JSON.parse(JSON.stringify(MOCK_BOOKS))), API_CONFIG.SIMULATED_DELAY_MS);
+    });
+  }
+
+  // Real Express API Integration (GET /api/books)
   try {
     const response = await fetch(`${API_CONFIG.API_BASE_URL}/books`);
     if (!response.ok) {

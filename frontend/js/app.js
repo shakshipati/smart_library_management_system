@@ -88,7 +88,7 @@ function setViewState(viewState, customMessage = '') {
       if (customMessage) {
         DOM.emptyMessage.textContent = customMessage;
       } else if (state.searchQuery.trim()) {
-        DOM.emptyMessage.textContent = `No books match "${state.searchQuery}". Try searching by another title, author, or ISBN.`;
+        DOM.emptyMessage.textContent = `No books match "${state.searchQuery}". Try searching by another title, publisher, or ISBN.`;
       } else {
         DOM.emptyMessage.textContent = 'No books are currently registered in this catalogue view.';
       }
@@ -136,7 +136,7 @@ async function loadBooks() {
  */
 function updateLibraryStats(books) {
   const total = books.length;
-  const available = books.filter(b => b.available).length;
+  const available = books.filter(b => (Number(b.available_copies) || 0) > 0).length;
 
   DOM.totalBooksCount.textContent = total;
   DOM.availableBooksCount.textContent = available;
@@ -153,19 +153,19 @@ function applySearchAndFilter() {
 
   // Filter the books list
   state.filteredBooks = state.allBooks.filter(book => {
-    // 1. Text matching (Title, Author, or ISBN)
-    const matchesSearch = 
-      !query ||
-      book.title.toLowerCase().includes(query) ||
-      book.author.toLowerCase().includes(query) ||
-      book.isbn.toLowerCase().includes(query);
+    // 1. Text matching (Title, Publisher, or ISBN)
+    const titleMatch = book.title ? book.title.toLowerCase().includes(query) : false;
+    const publisherMatch = book.publisher ? book.publisher.toLowerCase().includes(query) : false;
+    const isbnMatch = book.isbn ? String(book.isbn).toLowerCase().includes(query) : false;
+    const matchesSearch = !query || titleMatch || publisherMatch || isbnMatch;
 
-    // 2. Availability matching
+    // 2. Availability matching based on available_copies
+    const availableCopies = Number(book.available_copies) || 0;
     let matchesAvailability = true;
     if (filter === 'available') {
-      matchesAvailability = book.available === true;
+      matchesAvailability = availableCopies > 0;
     } else if (filter === 'unavailable') {
-      matchesAvailability = book.available === false;
+      matchesAvailability = availableCopies === 0;
     }
 
     return matchesSearch && matchesAvailability;
@@ -206,16 +206,18 @@ function renderBookCards(books) {
 
   // Generate cards
   const cardsHtml = books.map(book => {
-    const isAvailable = Boolean(book.available);
+    const totalCopies = Number(book.total_copies) || 0;
+    const availableCopies = Number(book.available_copies) || 0;
+    const isAvailable = availableCopies > 0;
     const statusClass = isAvailable ? 'status-available' : 'status-unavailable';
-    const statusText = isAvailable ? 'Available' : 'Checked Out';
+    const statusText = isAvailable ? `${availableCopies} Available` : 'Checked Out';
 
     return `
-      <article class="book-card" data-book-id="${book.id}">
+      <article class="book-card" data-book-id="${book.book_id}">
         <div>
-          <!-- Top meta: Category & Status Badge -->
+          <!-- Top meta: Publication Year Tag & Status Badge -->
           <div class="book-card-top">
-            <span class="book-category">${escapeHtml(book.category || 'General')}</span>
+            <span class="book-category">${escapeHtml(book.publication_year ? `Year ${book.publication_year}` : 'Book')}</span>
             <span class="status-badge ${statusClass}">
               <span class="status-dot"></span>
               ${statusText}
@@ -227,25 +229,24 @@ function renderBookCards(books) {
             ${escapeHtml(book.title)}
           </h3>
 
-          <!-- Author with icon -->
-          <p class="book-author">
+          <!-- Publisher -->
+          <p class="book-author" title="Publisher">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
             </svg>
-            <span>${escapeHtml(book.author)}</span>
+            <span>${escapeHtml(book.publisher || 'Independent / Unknown Publisher')}</span>
           </p>
         </div>
 
-        <!-- Meta info: ISBN and Shelf Location -->
+        <!-- Meta info: ISBN and Available / Total Copies -->
         <div class="book-meta">
           <div class="meta-row">
             <span class="meta-label">ISBN:</span>
-            <span class="meta-value isbn-code">${escapeHtml(book.isbn)}</span>
+            <span class="meta-value isbn-code">${escapeHtml(book.isbn || 'N/A')}</span>
           </div>
           <div class="meta-row">
-            <span class="meta-label">Location:</span>
-            <span class="meta-value">${escapeHtml(book.location || 'Campus Stack')}</span>
+            <span class="meta-label">Copies Available:</span>
+            <span class="meta-value ${isAvailable ? 'text-success' : ''}"><strong>${availableCopies}</strong> / ${totalCopies} total</span>
           </div>
         </div>
       </article>

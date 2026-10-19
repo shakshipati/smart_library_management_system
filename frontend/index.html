@@ -63,7 +63,7 @@
           <input 
             type="text" 
             id="searchInput" 
-            placeholder="Search by title, author, or ISBN..." 
+            placeholder="Search by title, publisher, or ISBN..." 
             autocomplete="off"
             aria-label="Search books"
           >
@@ -108,7 +108,7 @@
       <div class="loading-spinner-wrapper">
         <div class="spinner"></div>
         <p class="loading-text">Fetching campus catalogue...</p>
-        <p class="loading-subtext">Preparing titles, authors, and availability status</p>
+        <p class="loading-subtext">Preparing titles, publishers, and availability status</p>
       </div>
 
       <!-- Skeleton Placeholder Cards for smooth visual loading -->
@@ -151,7 +151,7 @@
           </svg>
         </div>
         <h3 class="state-title">No Books Found</h3>
-        <p class="state-message" id="emptyMessage">We couldn't find any books matching your search criteria. Try checking for spelling mistakes or searching by a different title, author, or ISBN.</p>
+        <p class="state-message" id="emptyMessage">We couldn't find any books matching your search criteria. Try checking for spelling mistakes or searching by a different title, publisher, or ISBN.</p>
         <button id="resetSearchBtn" class="btn-secondary">Clear Search & Filters</button>
       </div>
     </section>
@@ -169,7 +169,7 @@
   <footer class="app-footer">
     <div class="footer-container">
       <p>Smart Campus Library Management System &copy; 2026</p>
-      <p class="footer-subtext">Frontend Prototype • Configured for future integration with <code>GET /api/books</code></p>
+      <p class="footer-subtext">Connected to Live Backend API • <code>GET http://localhost:3000/api/books</code></p>
     </div>
   </footer>
 
