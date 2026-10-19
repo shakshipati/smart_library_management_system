@@ -3,74 +3,211 @@
  * Smart Campus Library Management System - Main Application Controller (app.js)
  * ==============================================================================
  * 
- * Beginner Guide:
- * This file handles all user interactions and updates what you see on the screen.
- * 
- * Main Responsibilities:
- * 1. Fetching books using the window.LibraryAPI service.
- * 2. Managing UI states (Loading, Success, Empty, Error).
- * 3. Handling live search (by Title, Author, or ISBN).
- * 4. Filtering books by availability status.
- * 5. Rendering book cards dynamically into the HTML.
+ * Workflows:
+ * 1. Book Catalogue: real-time search, availability filtering, copy inventory count.
+ * 2. Books Issued (Active Loans): borrower member, title, copy code, borrowed & due dates,
+ *    and Book Return action with button locking and immediate sync.
+ * 3. Issue a Book (Circulation Desk): select member, select available copy, 14-day loan terms,
+ *    submits to POST /api/loans, prevents repeat clicks, and refreshes all views on success.
  */
 
 // Application State Store
 const state = {
-  allBooks: [],         // Raw books received from API/Mock
-  filteredBooks: [],    // Books after search and filter chips are applied
-  activeFilter: 'all',  // 'all' | 'available' | 'unavailable'
-  searchQuery: '',      // Current search box text
-  currentStatus: 'idle' // 'loading' | 'success' | 'empty' | 'error'
+  // Catalogue State
+  allBooks: [],            // Books from GET /api/books
+  filteredBooks: [],       // Filtered books
+  activeFilter: 'all',     // 'all' | 'available' | 'unavailable'
+  searchQuery: '',         // Current search string
+  currentStatus: 'idle',   // 'loading' | 'success' | 'empty' | 'error'
+
+  // Active Loans State
+  activeLoans: [],         // Loans from GET /api/loans/active
+  loansStatus: 'idle',
+
+  // Issue a Book State
+  members: [],             // Members from GET /api/members
+  availableCopies: [],     // Available copies from GET /api/copies/available
+  activeSection: 'catalogue' // 'catalogue' | 'loans' | 'issue'
 };
 
 // Cached DOM Elements
 const DOM = {
-  // Search & Filter
+  // Navigation Tabs & Views
+  tabCatalogue: document.getElementById('tabCatalogue'),
+  tabLoans: document.getElementById('tabLoans'),
+  tabIssue: document.getElementById('tabIssue'),
+  catalogueView: document.getElementById('catalogueView'),
+  loansView: document.getElementById('loansView'),
+  issueView: document.getElementById('issueView'),
+  loansBadge: document.getElementById('loansBadge'),
+  goToIssueBtn: document.getElementById('goToIssueBtn'),
+
+  // Header Counters
+  totalBooksCount: document.getElementById('totalBooksCount'),
+  availableBooksCount: document.getElementById('availableBooksCount'),
+  activeLoansCount: document.getElementById('activeLoansCount'),
+
+  // Catalogue Search & Filters
   searchInput: document.getElementById('searchInput'),
   clearSearchBtn: document.getElementById('clearSearchBtn'),
   filterChips: document.querySelectorAll('.chip[data-filter]'),
 
-  // State Containers
+  // Catalogue State Containers
   loadingState: document.getElementById('loadingState'),
   errorState: document.getElementById('errorState'),
   emptyState: document.getElementById('emptyState'),
   booksCatalogue: document.getElementById('booksCatalogue'),
   booksGrid: document.getElementById('booksGrid'),
-
-  // Feedback & Messages
   errorMessage: document.getElementById('errorMessage'),
   emptyMessage: document.getElementById('emptyMessage'),
   resultsCount: document.getElementById('resultsCount'),
-  totalBooksCount: document.getElementById('totalBooksCount'),
-  availableBooksCount: document.getElementById('availableBooksCount'),
-
-  // Buttons
   retryBtn: document.getElementById('retryBtn'),
   resetSearchBtn: document.getElementById('resetSearchBtn'),
 
-  // Demo Buttons
-  testLoadingBtn: document.getElementById('testLoadingBtn'),
-  testEmptyBtn: document.getElementById('testEmptyBtn'),
-  testErrorBtn: document.getElementById('testErrorBtn'),
-  resetDemoBtn: document.getElementById('resetDemoBtn')
+  // Loans State Containers
+  loansLoadingState: document.getElementById('loansLoadingState'),
+  loansErrorState: document.getElementById('loansErrorState'),
+  loansErrorMessage: document.getElementById('loansErrorMessage'),
+  loansEmptyState: document.getElementById('loansEmptyState'),
+  loansContent: document.getElementById('loansContent'),
+  loansList: document.getElementById('loansList'),
+  refreshLoansBtn: document.getElementById('refreshLoansBtn'),
+  retryLoansBtn: document.getElementById('retryLoansBtn'),
+  loanFeedback: document.getElementById('loanFeedback'),
+
+  // Issue a Book Elements
+  issueFeedback: document.getElementById('issueFeedback'),
+  issueLoadingState: document.getElementById('issueLoadingState'),
+  issueErrorState: document.getElementById('issueErrorState'),
+  issueErrorMessage: document.getElementById('issueErrorMessage'),
+  retryIssueOptionsBtn: document.getElementById('retryIssueOptionsBtn'),
+  issueFormCard: document.getElementById('issueFormCard'),
+  issueBookForm: document.getElementById('issueBookForm'),
+  issueMemberSelect: document.getElementById('issueMemberSelect'),
+  issueCopySelect: document.getElementById('issueCopySelect'),
+  noCopiesAlert: document.getElementById('noCopiesAlert'),
+  calculatedDueDate: document.getElementById('calculatedDueDate'),
+  issueSubmitBtn: document.getElementById('issueSubmitBtn'),
+  issueResetBtn: document.getElementById('issueResetBtn')
 };
 
+// --- Utility Helpers ---
+
 /**
- * Switch UI view between: 'loading', 'success', 'empty', or 'error'
- * 
- * @param {'loading'|'success'|'empty'|'error'} viewState - The state to activate
- * @param {string} [customMessage] - Optional message for error or empty states
+ * Escapes HTML characters to prevent XSS injection
+ */
+function escapeHtml(text) {
+  if (typeof text !== 'string') return text ?? '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Formats ISO date string into readable format (e.g. "Oct 19, 2026")
+ */
+function formatDate(dateStr) {
+  if (!dateStr) return 'N/A';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return String(dateStr);
+  return d.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+/**
+ * Checks if a due date has passed
+ */
+function checkOverdue(dueStr) {
+  if (!dueStr) return false;
+  const dueDate = new Date(dueStr);
+  if (isNaN(dueDate.getTime())) return false;
+  return dueDate.getTime() < Date.now();
+}
+
+/**
+ * Shows temporary alert banner in the Books Issued section
+ */
+function showLoanFeedback(message, type = 'success') {
+  DOM.loanFeedback.className = `loan-feedback ${type}`;
+  DOM.loanFeedback.textContent = message;
+  DOM.loanFeedback.classList.remove('hidden');
+
+  clearTimeout(DOM.loanFeedback._timer);
+  DOM.loanFeedback._timer = setTimeout(() => {
+    DOM.loanFeedback.classList.add('hidden');
+  }, 6000);
+}
+
+/**
+ * Shows temporary alert banner in the Issue a Book section
+ */
+function showIssueFeedback(message, type = 'success') {
+  DOM.issueFeedback.className = `loan-feedback ${type}`;
+  DOM.issueFeedback.textContent = message;
+  DOM.issueFeedback.classList.remove('hidden');
+
+  clearTimeout(DOM.issueFeedback._timer);
+  DOM.issueFeedback._timer = setTimeout(() => {
+    DOM.issueFeedback.classList.add('hidden');
+  }, 6000);
+}
+
+// --- Navigation Section Handling ---
+
+function switchSection(section) {
+  state.activeSection = section;
+
+  // Reset tab active states
+  [DOM.tabCatalogue, DOM.tabLoans, DOM.tabIssue].forEach(tab => {
+    if (tab) {
+      tab.classList.remove('active');
+      tab.setAttribute('aria-selected', 'false');
+    }
+  });
+
+  // Hide all view panels
+  [DOM.catalogueView, DOM.loansView, DOM.issueView].forEach(view => {
+    if (view) {
+      view.classList.add('hidden');
+    }
+  });
+
+  if (section === 'catalogue') {
+    DOM.tabCatalogue.classList.add('active');
+    DOM.tabCatalogue.setAttribute('aria-selected', 'true');
+    DOM.catalogueView.classList.remove('hidden');
+  } else if (section === 'loans') {
+    DOM.tabLoans.classList.add('active');
+    DOM.tabLoans.setAttribute('aria-selected', 'true');
+    DOM.loansView.classList.remove('hidden');
+  } else if (section === 'issue') {
+    DOM.tabIssue.classList.add('active');
+    DOM.tabIssue.setAttribute('aria-selected', 'true');
+    DOM.issueView.classList.remove('hidden');
+    // Ensure checkout dropdown options are up to date
+    loadIssueOptions();
+  }
+}
+
+// --- View 1: Catalogue Logic ---
+
+/**
+ * Switch Catalogue view between: 'loading', 'success', 'empty', or 'error'
  */
 function setViewState(viewState, customMessage = '') {
   state.currentStatus = viewState;
 
-  // Hide all state containers first
   DOM.loadingState.classList.add('hidden');
   DOM.errorState.classList.add('hidden');
   DOM.emptyState.classList.add('hidden');
   DOM.booksCatalogue.classList.add('hidden');
 
-  // Activate the requested state container
   switch (viewState) {
     case 'loading':
       DOM.loadingState.classList.remove('hidden');
@@ -88,7 +225,7 @@ function setViewState(viewState, customMessage = '') {
       if (customMessage) {
         DOM.emptyMessage.textContent = customMessage;
       } else if (state.searchQuery.trim()) {
-        DOM.emptyMessage.textContent = `No books match "${state.searchQuery}". Try searching by another title, publisher, or ISBN.`;
+        DOM.emptyMessage.textContent = `No books match "${state.searchQuery}". Try searching by another title, author, publisher, or ISBN.`;
       } else {
         DOM.emptyMessage.textContent = 'No books are currently registered in this catalogue view.';
       }
@@ -104,36 +241,23 @@ function setViewState(viewState, customMessage = '') {
 }
 
 /**
- * Load books from the API layer (window.LibraryAPI)
- * Handles the full async lifecycle: loading -> success OR error
+ * Load books from GET /api/books
  */
 async function loadBooks() {
   setViewState('loading');
 
   try {
-    // Call the API service (currently mock, future: GET /api/books)
     const books = await window.LibraryAPI.fetchBooks();
-
-    // Store raw data in state
     state.allBooks = Array.isArray(books) ? books : [];
 
-    // Update global library header statistics
     updateLibraryStats(state.allBooks);
-
-    // Apply any active search or filter rules
     applySearchAndFilter();
-
   } catch (error) {
     console.error("Error loading catalogue:", error);
     setViewState('error', error.message || 'Unable to connect to the catalogue service.');
   }
 }
 
-/**
- * Updates total and available counters in the top header
- * 
- * @param {Array} books 
- */
 function updateLibraryStats(books) {
   const total = books.length;
   const available = books.filter(b => (Number(b.available_copies) || 0) > 0).length;
@@ -142,24 +266,17 @@ function updateLibraryStats(books) {
   DOM.availableBooksCount.textContent = available;
 }
 
-/**
- * Filters the stored books according to:
- * 1. Text Search: matches title, author, or ISBN (case-insensitive)
- * 2. Availability Filter: 'all', 'available', or 'unavailable'
- */
 function applySearchAndFilter() {
   const query = state.searchQuery.trim().toLowerCase();
   const filter = state.activeFilter;
 
-  // Filter the books list
   state.filteredBooks = state.allBooks.filter(book => {
-    // 1. Text matching (Title, Publisher, or ISBN)
     const titleMatch = book.title ? book.title.toLowerCase().includes(query) : false;
+    const authorMatch = book.authors ? book.authors.toLowerCase().includes(query) : false;
     const publisherMatch = book.publisher ? book.publisher.toLowerCase().includes(query) : false;
     const isbnMatch = book.isbn ? String(book.isbn).toLowerCase().includes(query) : false;
-    const matchesSearch = !query || titleMatch || publisherMatch || isbnMatch;
+    const matchesSearch = !query || titleMatch || authorMatch || publisherMatch || isbnMatch;
 
-    // 2. Availability matching based on available_copies
     const availableCopies = Number(book.available_copies) || 0;
     let matchesAvailability = true;
     if (filter === 'available') {
@@ -171,7 +288,6 @@ function applySearchAndFilter() {
     return matchesSearch && matchesAvailability;
   });
 
-  // Decide whether to show books or empty state
   if (state.allBooks.length === 0) {
     setViewState('empty', 'The library catalogue is currently empty.');
   } else if (state.filteredBooks.length === 0) {
@@ -182,29 +298,9 @@ function applySearchAndFilter() {
   }
 }
 
-/**
- * Helper to escape HTML characters to prevent XSS injection
- */
-function escapeHtml(text) {
-  if (typeof text !== 'string') return text;
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-/**
- * Render the book cards into the #booksGrid element
- * 
- * @param {Array} books 
- */
 function renderBookCards(books) {
-  // Clear previous cards
   DOM.booksGrid.innerHTML = '';
 
-  // Generate cards
   const cardsHtml = books.map(book => {
     const totalCopies = Number(book.total_copies) || 0;
     const availableCopies = Number(book.available_copies) || 0;
@@ -215,7 +311,6 @@ function renderBookCards(books) {
     return `
       <article class="book-card" data-book-id="${book.book_id}">
         <div>
-          <!-- Top meta: Publication Year Tag & Status Badge -->
           <div class="book-card-top">
             <span class="book-category">${escapeHtml(book.publication_year ? `Year ${book.publication_year}` : 'Book')}</span>
             <span class="status-badge ${statusClass}">
@@ -224,22 +319,25 @@ function renderBookCards(books) {
             </span>
           </div>
 
-          <!-- Title -->
           <h3 class="book-title" title="${escapeHtml(book.title)}">
             ${escapeHtml(book.title)}
           </h3>
 
-          <!-- Publisher -->
-          <p class="book-author" title="Publisher">
+          <!-- Author displayed clearly near the title -->
+          <p class="book-author" title="Author(s)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
             </svg>
-            <span>${escapeHtml(book.publisher || 'Independent / Unknown Publisher')}</span>
+            <span>${escapeHtml(book.authors || 'Author Unknown')}</span>
           </p>
         </div>
 
-        <!-- Meta info: ISBN and Available / Total Copies -->
         <div class="book-meta">
+          <div class="meta-row">
+            <span class="meta-label">Publisher:</span>
+            <span class="meta-value">${escapeHtml(book.publisher || 'N/A')}</span>
+          </div>
           <div class="meta-row">
             <span class="meta-label">ISBN:</span>
             <span class="meta-value isbn-code">${escapeHtml(book.isbn || 'N/A')}</span>
@@ -256,25 +354,310 @@ function renderBookCards(books) {
   DOM.booksGrid.innerHTML = cardsHtml;
 }
 
+// --- View 2: Books Issued (Active Loans) Logic ---
+
 /**
- * Event Listeners Registration
+ * Switch Loans view between: 'loading', 'success', 'empty', or 'error'
  */
-function setupEventListeners() {
-  // 1. Live Search Input
-  DOM.searchInput.addEventListener('input', (event) => {
-    state.searchQuery = event.target.value;
-    
-    // Toggle visibility of clear button
-    if (state.searchQuery.length > 0) {
-      DOM.clearSearchBtn.hidden = false;
+function setLoansViewState(viewState, customMessage = '') {
+  state.loansStatus = viewState;
+
+  DOM.loansLoadingState.classList.add('hidden');
+  DOM.loansErrorState.classList.add('hidden');
+  DOM.loansEmptyState.classList.add('hidden');
+  DOM.loansContent.classList.add('hidden');
+
+  switch (viewState) {
+    case 'loading':
+      DOM.loansLoadingState.classList.remove('hidden');
+      break;
+
+    case 'error':
+      DOM.loansErrorState.classList.remove('hidden');
+      DOM.loansErrorMessage.textContent = customMessage || 'Could not load active loans from the database.';
+      break;
+
+    case 'empty':
+      DOM.loansEmptyState.classList.remove('hidden');
+      break;
+
+    case 'success':
+      DOM.loansContent.classList.remove('hidden');
+      break;
+  }
+}
+
+/**
+ * Fetch and render active loans from GET /api/loans/active
+ */
+async function loadActiveLoans() {
+  setLoansViewState('loading');
+
+  try {
+    const loans = await window.LibraryAPI.fetchActiveLoans();
+    state.activeLoans = Array.isArray(loans) ? loans : [];
+
+    const count = state.activeLoans.length;
+    DOM.activeLoansCount.textContent = count;
+    DOM.loansBadge.textContent = count;
+
+    if (count === 0) {
+      setLoansViewState('empty');
     } else {
-      DOM.clearSearchBtn.hidden = true;
+      renderActiveLoans(state.activeLoans);
+      setLoansViewState('success');
+    }
+  } catch (error) {
+    console.error("Error loading active loans:", error);
+    DOM.activeLoansCount.textContent = '!';
+    DOM.loansBadge.textContent = '!';
+    setLoansViewState('error', error.message || 'Unable to connect to active loans service.');
+  }
+}
+
+/**
+ * Render active loan cards
+ */
+function renderActiveLoans(loans) {
+  DOM.loansList.innerHTML = '';
+
+  const html = loans.map(loan => {
+    const isOverdue = checkOverdue(loan.due_at);
+    const borrowedFormatted = formatDate(loan.borrowed_at);
+    const dueFormatted = formatDate(loan.due_at);
+
+    return `
+      <article class="loan-card" data-loan-id="${loan.loan_id}">
+        <div class="loan-main-info">
+          <!-- Title & Copy Code -->
+          <div class="loan-title-row">
+            <h3 class="loan-book-title">${escapeHtml(loan.title || 'Untitled Book')}</h3>
+            <span class="copy-badge" title="Copy Code">${escapeHtml(loan.copy_code || 'Copy')}</span>
+          </div>
+
+          <!-- Borrower Member & Dates -->
+          <div class="loan-details">
+            <div class="loan-detail-item" title="Borrower">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              <span><strong>Member:</strong> ${escapeHtml(loan.full_name || 'Anonymous Member')}</span>
+            </div>
+
+            <div class="loan-detail-item" title="Date Borrowed">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span><strong>Borrowed:</strong> ${borrowedFormatted}</span>
+            </div>
+
+            <div class="loan-detail-item" title="Due Date">
+              <span class="due-pill ${isOverdue ? 'due-overdue' : 'due-normal'}">
+                ${isOverdue ? '⚠️ Overdue: ' : 'Due: '}${dueFormatted}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Return Action Button -->
+        <div class="loan-actions">
+          <button class="btn-return" data-loan-id="${loan.loan_id}" data-book-title="${escapeHtml(loan.title || 'Book')}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 14 4 9 9 4"/>
+              <path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
+            </svg>
+            <span>Return</span>
+          </button>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  DOM.loansList.innerHTML = html;
+}
+
+/**
+ * Handle "Return" button click
+ */
+async function handleReturnBook(button) {
+  const loanId = button.getAttribute('data-loan-id');
+  const bookTitle = button.getAttribute('data-book-title') || 'Book';
+  if (!loanId) return;
+
+  // Prevent multiple clicks while return is pending
+  button.disabled = true;
+  const originalHtml = button.innerHTML;
+  button.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner-inline">
+      <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+      <path d="M12 2a10 10 0 0 1 10 10"/>
+    </svg>
+    <span>Returning...</span>
+  `;
+
+  try {
+    const result = await window.LibraryAPI.returnLoan(loanId);
+    showLoanFeedback(result.message || `"${bookTitle}" returned successfully.`, 'success');
+
+    // Refresh active loans list, catalogue availability, and issue dropdown choices
+    await Promise.all([
+      loadActiveLoans(),
+      loadBooks(),
+      loadIssueOptions()
+    ]);
+  } catch (error) {
+    console.error("Return loan failed:", error);
+    showLoanFeedback(`Could not return book: ${error.message}`, 'error');
+
+    button.disabled = false;
+    button.innerHTML = originalHtml;
+  }
+}
+
+// --- View 3: Issue a Book (Circulation Desk) Logic ---
+
+/**
+ * Fetch members and available copies to populate the Issue Form
+ */
+async function loadIssueOptions() {
+  DOM.issueLoadingState.classList.remove('hidden');
+  DOM.issueErrorState.classList.add('hidden');
+  DOM.issueFormCard.classList.add('hidden');
+
+  // Compute standard 14 days due date
+  const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+  DOM.calculatedDueDate.textContent = dueDate.toLocaleDateString(undefined, {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+
+  try {
+    const [members, availableCopies] = await Promise.all([
+      window.LibraryAPI.fetchMembers(),
+      window.LibraryAPI.fetchAvailableCopies()
+    ]);
+
+    state.members = Array.isArray(members) ? members : [];
+    state.availableCopies = Array.isArray(availableCopies) ? availableCopies : [];
+
+    // 1. Populate Member Select
+    if (state.members.length === 0) {
+      DOM.issueMemberSelect.innerHTML = '<option value="" disabled selected>No registered members found</option>';
+      DOM.issueMemberSelect.disabled = true;
+    } else {
+      DOM.issueMemberSelect.disabled = false;
+      DOM.issueMemberSelect.innerHTML = 
+        '<option value="" disabled selected>-- Select Member --</option>' +
+        state.members.map(m => `
+          <option value="${m.member_id}">
+            ${escapeHtml(m.full_name)} (${escapeHtml(m.member_type ? m.member_type.toUpperCase() : 'MEMBER')})
+          </option>
+        `).join('');
     }
 
+    // 2. Populate Available Copies Select
+    if (state.availableCopies.length === 0) {
+      DOM.issueCopySelect.innerHTML = '<option value="" disabled selected>No physical copies available</option>';
+      DOM.issueCopySelect.disabled = true;
+      DOM.noCopiesAlert.classList.remove('hidden');
+      DOM.issueSubmitBtn.disabled = true;
+    } else {
+      DOM.issueCopySelect.disabled = false;
+      DOM.noCopiesAlert.classList.add('hidden');
+      DOM.issueSubmitBtn.disabled = false;
+      DOM.issueCopySelect.innerHTML = 
+        '<option value="" disabled selected>-- Select Available Copy --</option>' +
+        state.availableCopies.map(c => `
+          <option value="${c.copy_id}">
+            [${escapeHtml(c.copy_code)}] ${escapeHtml(c.title)} (ISBN: ${escapeHtml(c.isbn || 'N/A')})
+          </option>
+        `).join('');
+    }
+
+    DOM.issueLoadingState.classList.add('hidden');
+    DOM.issueFormCard.classList.remove('hidden');
+
+  } catch (error) {
+    console.error("Error loading issue options:", error);
+    DOM.issueLoadingState.classList.add('hidden');
+    DOM.issueErrorMessage.textContent = error.message || 'Could not load members or available copies from database.';
+    DOM.issueErrorState.classList.remove('hidden');
+  }
+}
+
+/**
+ * Handle "Issue Book" form submission
+ */
+async function handleIssueSubmit(event) {
+  event.preventDefault();
+
+  const memberId = DOM.issueMemberSelect.value;
+  const copyId = DOM.issueCopySelect.value;
+
+  if (!memberId || !copyId) {
+    showIssueFeedback('Please select both a borrowing member and an available copy.', 'error');
+    return;
+  }
+
+  // Prevent repeat submissions while request is in progress
+  DOM.issueSubmitBtn.disabled = true;
+  const originalBtnHtml = DOM.issueSubmitBtn.innerHTML;
+  DOM.issueSubmitBtn.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner-inline">
+      <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/>
+      <path d="M12 2a10 10 0 0 1 10 10"/>
+    </svg>
+    <span>Issuing Book...</span>
+  `;
+
+  try {
+    const result = await window.LibraryAPI.issueLoan(memberId, copyId);
+    showIssueFeedback(result.message || 'Book checked out successfully!', 'success');
+
+    // Reset form inputs
+    DOM.issueBookForm.reset();
+
+    // Immediately refresh catalogue, active loans, and available copy choices
+    await Promise.all([
+      loadBooks(),
+      loadActiveLoans(),
+      loadIssueOptions()
+    ]);
+
+  } catch (error) {
+    console.error("Issue loan failed:", error);
+    showIssueFeedback(`Checkout failed: ${error.message}`, 'error');
+  } finally {
+    DOM.issueSubmitBtn.disabled = false;
+    DOM.issueSubmitBtn.innerHTML = originalBtnHtml;
+  }
+}
+
+// --- Event Listeners Setup ---
+
+function setupEventListeners() {
+  // Navigation Tabs
+  DOM.tabCatalogue.addEventListener('click', () => switchSection('catalogue'));
+  DOM.tabLoans.addEventListener('click', () => switchSection('loans'));
+  DOM.tabIssue.addEventListener('click', () => switchSection('issue'));
+  if (DOM.goToIssueBtn) {
+    DOM.goToIssueBtn.addEventListener('click', () => switchSection('issue'));
+  }
+
+  // Live Search Input
+  DOM.searchInput.addEventListener('input', (event) => {
+    state.searchQuery = event.target.value;
+    DOM.clearSearchBtn.hidden = state.searchQuery.length === 0;
     applySearchAndFilter();
   });
 
-  // 2. Clear Search Button
+  // Clear Search Button
   DOM.clearSearchBtn.addEventListener('click', () => {
     DOM.searchInput.value = '';
     state.searchQuery = '';
@@ -283,24 +666,21 @@ function setupEventListeners() {
     applySearchAndFilter();
   });
 
-  // 3. Filter Chips (All, Available, Checked Out)
+  // Filter Chips
   DOM.filterChips.forEach(chip => {
     chip.addEventListener('click', () => {
-      // Update UI active state
       DOM.filterChips.forEach(c => {
         c.classList.remove('active');
         c.setAttribute('aria-checked', 'false');
       });
       chip.classList.add('active');
       chip.setAttribute('aria-checked', 'true');
-
-      // Update state and re-filter
       state.activeFilter = chip.getAttribute('data-filter');
       applySearchAndFilter();
     });
   });
 
-  // 4. Retry and Reset Search Buttons
+  // Catalogue Retry and Reset
   DOM.retryBtn.addEventListener('click', () => {
     window.LibraryAPI.resetDemoStates();
     loadBooks();
@@ -310,49 +690,41 @@ function setupEventListeners() {
     DOM.searchInput.value = '';
     state.searchQuery = '';
     DOM.clearSearchBtn.hidden = true;
-    
-    // Reset filter chip to 'all'
     DOM.filterChips.forEach(c => {
       const isAll = c.getAttribute('data-filter') === 'all';
       c.classList.toggle('active', isAll);
       c.setAttribute('aria-checked', isAll ? 'true' : 'false');
     });
     state.activeFilter = 'all';
-
-    window.LibraryAPI.resetDemoStates();
     applySearchAndFilter();
   });
 
-  // 5. Interactive Demo Buttons (to preview Loading, Empty, and Error states)
-  DOM.testLoadingBtn.addEventListener('click', () => {
-    window.LibraryAPI.resetDemoStates();
+  // Books Issued: Return Button (Event Delegation)
+  DOM.loansList.addEventListener('click', (event) => {
+    const returnBtn = event.target.closest('.btn-return');
+    if (returnBtn && !returnBtn.disabled) {
+      handleReturnBook(returnBtn);
+    }
+  });
+
+  // Loans: Refresh and Retry Buttons
+  DOM.refreshLoansBtn.addEventListener('click', () => {
+    loadActiveLoans();
     loadBooks();
   });
 
-  DOM.testEmptyBtn.addEventListener('click', () => {
-    window.LibraryAPI.setForceEmpty(true);
-    window.LibraryAPI.setForceError(false);
-    loadBooks();
+  DOM.retryLoansBtn.addEventListener('click', () => {
+    loadActiveLoans();
   });
 
-  DOM.testErrorBtn.addEventListener('click', () => {
-    window.LibraryAPI.setForceError(true);
-    window.LibraryAPI.setForceEmpty(false);
-    loadBooks();
+  // Issue Form: Submit and Reset
+  DOM.issueBookForm.addEventListener('submit', handleIssueSubmit);
+  DOM.issueResetBtn.addEventListener('click', () => {
+    DOM.issueBookForm.reset();
+    DOM.issueFeedback.classList.add('hidden');
   });
-
-  DOM.resetDemoBtn.addEventListener('click', () => {
-    DOM.searchInput.value = '';
-    state.searchQuery = '';
-    DOM.clearSearchBtn.hidden = true;
-    DOM.filterChips.forEach(c => {
-      const isAll = c.getAttribute('data-filter') === 'all';
-      c.classList.toggle('active', isAll);
-      c.setAttribute('aria-checked', isAll ? 'true' : 'false');
-    });
-    state.activeFilter = 'all';
-    window.LibraryAPI.resetDemoStates();
-    loadBooks();
+  DOM.retryIssueOptionsBtn.addEventListener('click', () => {
+    loadIssueOptions();
   });
 }
 
@@ -360,4 +732,6 @@ function setupEventListeners() {
 document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   loadBooks();
+  loadActiveLoans();
+  loadIssueOptions();
 });

@@ -18,6 +18,7 @@ const pool = mysql.createPool({
 
 // Serve the frontend files from the sibling frontend folder.
 app.use(express.static(path.join(__dirname, "..", "frontend")));
+app.use(express.json());
 
 app.get("/api/books", async (req, res) => {
   try {
@@ -28,6 +29,12 @@ app.get("/api/books", async (req, res) => {
         b.title,
         b.publisher,
         b.publication_year,
+        (
+          SELECT GROUP_CONCAT(a.full_name ORDER BY a.full_name SEPARATOR ', ')
+          FROM book_authors AS ba
+          JOIN authors AS a ON ba.author_id = a.author_id
+          WHERE ba.book_id = b.book_id
+        ) AS authors,
         COALESCE(c.total_copies, 0) AS total_copies,
         COALESCE(c.available_copies, 0) AS available_copies
       FROM books AS b
@@ -46,6 +53,178 @@ app.get("/api/books", async (req, res) => {
   } catch (error) {
     console.error("Could not load books:", error.message);
     res.status(500).json({ error: "Could not load books from the database." });
+  }
+});
+app.post("/api/loans/:id/return", async (req, res) => {
+  const loanId = Number(req.params.id);
+  let connection;
+
+  if (!Number.isInteger(loanId) || loanId < 1) {
+    return res.status(400).json({ error: "Invalid loan ID." });
+  }
+
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [loans] = await connection.query(
+      "SELECT copy_id, returned_at FROM loans WHERE loan_id = ? FOR UPDATE",
+      [loanId]
+    );
+
+    if (loans.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: "Loan not found." });
+    }
+
+    if (loans[0].returned_at !== null) {
+      await connection.rollback();
+      return res.status(409).json({ error: "This loan has already been returned." });
+    }
+
+    await connection.query(
+      "UPDATE loans SET returned_at = NOW() WHERE loan_id = ?",
+      [loanId]
+    );
+
+    await connection.query(
+      "UPDATE book_copies SET status = 'available' WHERE copy_id = ?",
+      [loans[0].copy_id]
+    );
+
+    await connection.commit();
+
+    res.json({ message: "Book returned successfully.", loan_id: loanId });
+  } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+
+    console.error("Could not return book:", error.message);
+    res.status(500).json({ error: "Could not return the book." });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+});
+app.post("/api/loans", async (req, res) => {
+  const memberId = Number(req.body.member_id);
+  const copyId = Number(req.body.copy_id);
+  let connection;
+
+  if (!Number.isInteger(memberId) || memberId < 1 ||
+      !Number.isInteger(copyId) || copyId < 1) {
+    return res.status(400).json({ error: "Valid member_id and copy_id are required." });
+  }
+
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [copies] = await connection.query(
+      "SELECT status FROM book_copies WHERE copy_id = ? FOR UPDATE",
+      [copyId]
+    );
+
+    if (copies.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: "Book copy not found." });
+    }
+
+    if (copies[0].status !== "available") {
+      await connection.rollback();
+      return res.status(409).json({ error: "This copy is not available." });
+    }
+
+    const [result] = await connection.query(
+      `INSERT INTO loans (member_id, copy_id, borrowed_at, due_at)
+       VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 14 DAY))`,
+      [memberId, copyId]
+    );
+
+    await connection.query(
+      "UPDATE book_copies SET status = 'borrowed' WHERE copy_id = ?",
+      [copyId]
+    );
+
+    await connection.commit();
+
+    res.status(201).json({
+      message: "Book checked out successfully.",
+      loan_id: result.insertId,
+      member_id: memberId,
+      copy_id: copyId
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+
+    console.error("Could not check out book:", error.message);
+    res.status(500).json({ error: "Could not check out the book." });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+app.get("/api/loans/active", async (req, res) => {
+  try {
+    const [loans] = await pool.query(`
+      SELECT
+        loans.loan_id,
+        members.full_name,
+        books.title,
+        book_copies.copy_code,
+        loans.borrowed_at,
+        loans.due_at
+      FROM loans
+      JOIN members ON loans.member_id = members.member_id
+      JOIN book_copies ON loans.copy_id = book_copies.copy_id
+      JOIN books ON book_copies.book_id = books.book_id
+      WHERE loans.returned_at IS NULL
+      ORDER BY loans.due_at
+    `);
+
+    res.json(loans);
+  } catch (error) {
+    console.error("Could not load active loans:", error.message);
+    res.status(500).json({ error: "Could not load active loans." });
+  }
+});
+
+app.get("/api/members", async (req, res) => {
+  try {
+    const [members] = await pool.query(`
+      SELECT member_id, full_name, member_type
+      FROM members
+      ORDER BY full_name
+    `);
+
+    res.json(members);
+  } catch (error) {
+    console.error("Could not load members:", error.message);
+    res.status(500).json({ error: "Could not load members." });
+  }
+});
+
+app.get("/api/copies/available", async (req, res) => {
+  try {
+    const [copies] = await pool.query(`
+      SELECT
+        book_copies.copy_id,
+        book_copies.copy_code,
+        books.book_id,
+        books.title,
+        books.isbn
+      FROM book_copies
+      JOIN books ON book_copies.book_id = books.book_id
+      WHERE book_copies.status = 'available'
+      ORDER BY books.title, book_copies.copy_code
+    `);
+
+    res.json(copies);
+  } catch (error) {
+    console.error("Could not load available copies:", error.message);
+    res.status(500).json({ error: "Could not load available copies." });
   }
 });
 

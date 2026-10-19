@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Smart Campus Library Management System - Book Catalogue">
-  <title>Smart Campus Library | Book Catalogue</title>
+  <meta name="description" content="Smart Campus Library Management System - Book Catalogue, Active Loans & Issue Desk">
+  <title>Smart Campus Library | Circulation & Catalogue</title>
   
   <!-- Modern Google Font: Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,14 +30,14 @@
         </div>
         <div class="brand-text">
           <h1>Smart Campus Library</h1>
-          <p class="brand-tagline">Central Repository & Catalogue System</p>
+          <p class="brand-tagline">Central Repository & Circulation Desk</p>
         </div>
       </div>
 
       <!-- Quick Stats Counter -->
       <div class="catalogue-stats" id="catalogueStats">
         <div class="stat-item">
-          <span class="stat-label">Total Books</span>
+          <span class="stat-label">Total Titles</span>
           <span class="stat-value" id="totalBooksCount">-</span>
         </div>
         <div class="stat-divider"></div>
@@ -45,123 +45,354 @@
           <span class="stat-label">Available</span>
           <span class="stat-value text-success" id="availableBooksCount">-</span>
         </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">Issued</span>
+          <span class="stat-value text-warning" id="activeLoansCount">-</span>
+        </div>
       </div>
     </div>
   </header>
 
+  <!-- Section Navigation Tabs -->
+  <nav class="app-nav" aria-label="Library Navigation Sections">
+    <div class="nav-container">
+      <button class="nav-tab active" id="tabCatalogue" role="tab" aria-selected="true" aria-controls="catalogueView">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+          <path d="M6 6h10"/>
+          <path d="M6 10h10"/>
+        </svg>
+        <span>Book Catalogue</span>
+      </button>
+
+      <button class="nav-tab" id="tabLoans" role="tab" aria-selected="false" aria-controls="loansView">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span>Books Issued</span>
+        <span class="nav-badge" id="loansBadge">0</span>
+      </button>
+
+      <button class="nav-tab" id="tabIssue" role="tab" aria-selected="false" aria-controls="issueView">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        <span>Issue a Book</span>
+      </button>
+    </div>
+  </nav>
+
   <!-- Main Container -->
   <main class="main-content">
     
-    <!-- Search & Filter Controls -->
-    <section class="catalogue-controls" aria-label="Catalogue Search and Filters">
-      <div class="search-wrapper">
-        <div class="search-box">
-          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <input 
-            type="text" 
-            id="searchInput" 
-            placeholder="Search by title, publisher, or ISBN..." 
-            autocomplete="off"
-            aria-label="Search books"
-          >
-          <button id="clearSearchBtn" class="clear-btn" aria-label="Clear search" title="Clear search" hidden>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
+    <!-- View 1: Book Catalogue Section -->
+    <div id="catalogueView" class="view-panel" role="tabpanel" aria-labelledby="tabCatalogue">
+      <!-- Search & Filter Controls -->
+      <section class="catalogue-controls" aria-label="Catalogue Search and Filters">
+        <div class="search-wrapper">
+          <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
+            <input 
+              type="text" 
+              id="searchInput" 
+              placeholder="Search by title, author, publisher, or ISBN..." 
+              autocomplete="off"
+              aria-label="Search books"
+            >
+            <button id="clearSearchBtn" class="clear-btn" aria-label="Clear search" title="Clear search" hidden>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Chips Toolbar -->
+        <div class="controls-toolbar">
+          <div class="filter-chips" role="radiogroup" aria-label="Filter books by availability">
+            <button class="chip active" data-filter="all" role="radio" aria-checked="true">All Books</button>
+            <button class="chip" data-filter="available" role="radio" aria-checked="false">Available Only</button>
+            <button class="chip" data-filter="unavailable" role="radio" aria-checked="false">Checked Out</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Results Overview -->
+      <div class="results-header">
+        <div class="results-info">
+          <h2 id="catalogueHeading">Catalogue Books</h2>
+          <span class="results-badge" id="resultsCount">Loading...</span>
+        </div>
+      </div>
+
+      <!-- State 1: Catalogue Loading State -->
+      <section id="loadingState" class="state-container" aria-live="polite">
+        <div class="loading-spinner-wrapper">
+          <div class="spinner"></div>
+          <p class="loading-text">Fetching campus catalogue...</p>
+          <p class="loading-subtext">Preparing titles, authors, publishers, and availability status</p>
+        </div>
+
+        <!-- Skeleton Placeholder Cards for smooth visual loading -->
+        <div class="books-grid skeleton-grid">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+      </section>
+
+      <!-- State 2: Catalogue Error State -->
+      <section id="errorState" class="state-container hidden" aria-live="assertive">
+        <div class="state-card error-card">
+          <div class="state-icon error-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <h3 class="state-title">Unable to Load Catalogue</h3>
+          <p class="state-message" id="errorMessage">An unexpected error occurred while loading books. Please check your network connection or try again.</p>
+          <button id="retryBtn" class="btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            Try Again
+          </button>
+        </div>
+      </section>
+
+      <!-- State 3: Catalogue Empty State -->
+      <section id="emptyState" class="state-container hidden" aria-live="polite">
+        <div class="state-card empty-card">
+          <div class="state-icon empty-icon">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="10" r="3"/>
+              <path d="m14.5 12.5 2.5 2.5"/>
+            </svg>
+          </div>
+          <h3 class="state-title">No Books Found</h3>
+          <p class="state-message" id="emptyMessage">We couldn't find any books matching your search criteria. Try checking for spelling mistakes or searching by a different title, author, publisher, or ISBN.</p>
+          <button id="resetSearchBtn" class="btn-secondary">Clear Search & Filters</button>
+        </div>
+      </section>
+
+      <!-- State 4: Book Grid (Catalogue) -->
+      <section id="booksCatalogue" class="catalogue-section hidden">
+        <div class="books-grid" id="booksGrid">
+          <!-- Book cards dynamically injected by app.js -->
+        </div>
+      </section>
+    </div>
+
+    <!-- View 2: Books Issued (Active Loans) Section -->
+    <div id="loansView" class="view-panel hidden" role="tabpanel" aria-labelledby="tabLoans">
+      <div class="view-header">
+        <div class="view-header-text">
+          <h2>Books Issued (Active Loans)</h2>
+          <p class="view-subtitle">Monitor currently borrowed campus copies and process inventory returns</p>
+        </div>
+        <div class="header-action-group">
+          <button id="goToIssueBtn" class="btn-primary btn-sm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Issue a Book</span>
+          </button>
+          <button id="refreshLoansBtn" class="btn-secondary btn-sm" title="Refresh active loans from database">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
-      <!-- Filter Chips & Demo Controls -->
-      <div class="controls-toolbar">
-        <div class="filter-chips" role="radiogroup" aria-label="Filter books by availability">
-          <button class="chip active" data-filter="all" role="radio" aria-checked="true">All Books</button>
-          <button class="chip" data-filter="available" role="radio" aria-checked="false">Available Only</button>
-          <button class="chip" data-filter="unavailable" role="radio" aria-checked="false">Checked Out</button>
-        </div>
+      <!-- Action status notification banner -->
+      <div id="loanFeedback" class="loan-feedback hidden" role="status" aria-live="polite"></div>
 
-        <!-- Demonstration Controls for Testing States -->
-        <div class="demo-state-actions">
-          <span class="demo-label">Test States:</span>
-          <button id="testLoadingBtn" class="btn-demo" title="Trigger Loading State">Loading</button>
-          <button id="testEmptyBtn" class="btn-demo" title="Trigger Empty State">Empty</button>
-          <button id="testErrorBtn" class="btn-demo" title="Trigger Error State">Error</button>
-          <button id="resetDemoBtn" class="btn-demo btn-reset" title="Reset to standard mock data">Reset</button>
+      <!-- State 1: Loans Loading State -->
+      <section id="loansLoadingState" class="state-container" aria-live="polite">
+        <div class="loading-spinner-wrapper">
+          <div class="spinner"></div>
+          <p class="loading-text">Loading issued books...</p>
+          <p class="loading-subtext">Fetching active loan records from the database</p>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Results Overview -->
-    <div class="results-header">
-      <div class="results-info">
-        <h2 id="catalogueHeading">Catalogue Books</h2>
-        <span class="results-badge" id="resultsCount">Loading...</span>
-      </div>
+      <!-- State 2: Loans Error State -->
+      <section id="loansErrorState" class="state-container hidden" aria-live="assertive">
+        <div class="state-card error-card">
+          <div class="state-icon error-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <h3 class="state-title">Unable to Load Issued Books</h3>
+          <p class="state-message" id="loansErrorMessage">Could not load active loans from the database.</p>
+          <button id="retryLoansBtn" class="btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            Try Again
+          </button>
+        </div>
+      </section>
+
+      <!-- State 3: Loans Empty State -->
+      <section id="loansEmptyState" class="state-container hidden" aria-live="polite">
+        <div class="state-card empty-card">
+          <div class="state-icon empty-icon">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <h3 class="state-title">No Books Currently Issued</h3>
+          <p class="state-message">All library book copies are returned and available on campus shelves.</p>
+        </div>
+      </section>
+
+      <!-- State 4: Loans List / Table Container -->
+      <section id="loansContent" class="loans-content hidden">
+        <div class="loans-list" id="loansList">
+          <!-- Loan cards dynamically injected by app.js -->
+        </div>
+      </section>
     </div>
 
-    <!-- State 1: Loading State -->
-    <section id="loadingState" class="state-container" aria-live="polite">
-      <div class="loading-spinner-wrapper">
-        <div class="spinner"></div>
-        <p class="loading-text">Fetching campus catalogue...</p>
-        <p class="loading-subtext">Preparing titles, publishers, and availability status</p>
-      </div>
-
-      <!-- Skeleton Placeholder Cards for smooth visual loading -->
-      <div class="books-grid skeleton-grid">
-        <div class="skeleton-card"></div>
-        <div class="skeleton-card"></div>
-        <div class="skeleton-card"></div>
-      </div>
-    </section>
-
-    <!-- State 2: Error State -->
-    <section id="errorState" class="state-container hidden" aria-live="assertive">
-      <div class="state-card error-card">
-        <div class="state-icon error-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
+    <!-- View 3: Issue a Book Workflow Section -->
+    <div id="issueView" class="view-panel hidden" role="tabpanel" aria-labelledby="tabIssue">
+      <div class="view-header">
+        <div class="view-header-text">
+          <h2>Issue a Book (Circulation Desk)</h2>
+          <p class="view-subtitle">Select a registered campus member and an available copy to record a standard 14-day checkout</p>
         </div>
-        <h3 class="state-title">Unable to Load Catalogue</h3>
-        <p class="state-message" id="errorMessage">An unexpected error occurred while loading books. Please check your network connection or try again.</p>
-        <button id="retryBtn" class="btn-primary">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-          </svg>
-          Try Again
-        </button>
       </div>
-    </section>
 
-    <!-- State 3: Empty State -->
-    <section id="emptyState" class="state-container hidden" aria-live="polite">
-      <div class="state-card empty-card">
-        <div class="state-icon empty-icon">
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
-            <circle cx="12" cy="10" r="3"/>
-            <path d="m14.5 12.5 2.5 2.5"/>
-          </svg>
+      <!-- Action status notification banner -->
+      <div id="issueFeedback" class="loan-feedback hidden" role="status" aria-live="polite"></div>
+
+      <!-- Loading State for Form Options -->
+      <div id="issueLoadingState" class="state-container hidden" aria-live="polite">
+        <div class="loading-spinner-wrapper">
+          <div class="spinner"></div>
+          <p class="loading-text">Loading checkout options...</p>
+          <p class="loading-subtext">Fetching members and available copies from the database</p>
         </div>
-        <h3 class="state-title">No Books Found</h3>
-        <p class="state-message" id="emptyMessage">We couldn't find any books matching your search criteria. Try checking for spelling mistakes or searching by a different title, publisher, or ISBN.</p>
-        <button id="resetSearchBtn" class="btn-secondary">Clear Search & Filters</button>
       </div>
-    </section>
 
-    <!-- State 4: Book Grid (Catalogue) -->
-    <section id="booksCatalogue" class="catalogue-section hidden">
-      <div class="books-grid" id="booksGrid">
-        <!-- Book cards dynamically injected by app.js -->
+      <!-- Error State for Form Options -->
+      <div id="issueErrorState" class="state-container hidden" aria-live="assertive">
+        <div class="state-card error-card">
+          <div class="state-icon error-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <h3 class="state-title">Unable to Load Checkout Options</h3>
+          <p class="state-message" id="issueErrorMessage">Failed to load members or available copies from the database.</p>
+          <button id="retryIssueOptionsBtn" class="btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            Try Again
+          </button>
+        </div>
       </div>
-    </section>
+
+      <!-- Issue Form Card -->
+      <div id="issueFormCard" class="issue-card">
+        <form id="issueBookForm" novalidate>
+          <div class="form-grid">
+            <!-- Member Dropdown -->
+            <div class="form-group">
+              <label for="issueMemberSelect" class="form-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span>Borrowing Member *</span>
+              </label>
+              <select id="issueMemberSelect" class="form-select" required>
+                <option value="" disabled selected>-- Select Member --</option>
+              </select>
+              <span class="form-hint" id="memberHint">Registered students and faculty members</span>
+            </div>
+
+            <!-- Available Copy Dropdown -->
+            <div class="form-group">
+              <label for="issueCopySelect" class="form-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+                  <path d="M6 6h10"/>
+                  <path d="M6 10h10"/>
+                </svg>
+                <span>Available Book Copy *</span>
+              </label>
+              <select id="issueCopySelect" class="form-select" required>
+                <option value="" disabled selected>-- Select Available Copy --</option>
+              </select>
+              <span class="form-hint" id="copyHint">Only physical copies with 'available' status</span>
+            </div>
+          </div>
+
+          <!-- Empty State Alert when 0 copies available -->
+          <div id="noCopiesAlert" class="form-alert hidden">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div>
+              <strong>No physical copies currently available:</strong> All copies in the campus catalogue are currently borrowed. Return an issued book from the <strong>Books Issued</strong> tab to restore availability.
+            </div>
+          </div>
+
+          <!-- Loan Terms Box -->
+          <div class="loan-terms-box">
+            <div class="terms-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span>Standard Loan Policy</span>
+            </div>
+            <p class="terms-text">Loan Duration: <strong>14 Days</strong> &bull; Calculated Due Date: <strong id="calculatedDueDate">-</strong></p>
+          </div>
+
+          <!-- Submit & Reset Actions -->
+          <div class="form-actions">
+            <button type="submit" id="issueSubmitBtn" class="btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <line x1="19" y1="8" x2="19" y2="14"/>
+                <line x1="22" y1="11" x2="16" y2="11"/>
+              </svg>
+              <span>Confirm & Issue Book</span>
+            </button>
+            <button type="button" id="issueResetBtn" class="btn-secondary">Clear Selections</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
   </main>
 
@@ -169,14 +400,14 @@
   <footer class="app-footer">
     <div class="footer-container">
       <p>Smart Campus Library Management System &copy; 2026</p>
-      <p class="footer-subtext">Connected to Live Backend API • <code>GET http://localhost:3000/api/books</code></p>
+      <p class="footer-subtext">Connected to Live Backend API &bull; <code>/api/books</code> &bull; <code>/api/loans/active</code> &bull; <code>/api/copies/available</code> &bull; <code>/api/members</code></p>
     </div>
   </footer>
 
   <!-- Scripts: Loaded in dependency order -->
-  <!-- 1. api.js: Data layer (provides mock data & API fetch abstraction) -->
+  <!-- 1. api.js: Data layer -->
   <script src="js/api.js"></script>
-  <!-- 2. app.js: Presentation layer (handles UI, search filtering, and state changes) -->
+  <!-- 2. app.js: Presentation layer -->
   <script src="js/app.js"></script>
 </body>
 </html>

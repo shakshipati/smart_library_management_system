@@ -146,12 +146,130 @@ async function fetchBooks() {
   }
 }
 
+/**
+ * Fetch currently active loans from GET /api/loans/active
+ * @returns {Promise<Array>} Array of active loan records from database
+ */
+async function fetchActiveLoans() {
+  try {
+    const response = await fetch(`${API_CONFIG.API_BASE_URL}/loans/active`);
+    if (!response.ok) {
+      throw new Error(`Failed to load active loans (Status: ${response.status} ${response.statusText})`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("LibraryAPI fetchActiveLoans Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Process book return by loan ID via POST /api/loans/:id/return
+ * @param {number|string} loanId
+ * @returns {Promise<Object>} API response
+ */
+async function returnLoan(loanId) {
+  try {
+    const response = await fetch(`${API_CONFIG.API_BASE_URL}/loans/${loanId}/return`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || `Could not return book (Status: ${response.status})`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("LibraryAPI returnLoan Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch registered campus members from GET /api/members
+ * @returns {Promise<Array>} Array of member records [{ member_id, full_name, member_type }]
+ */
+async function fetchMembers() {
+  try {
+    const response = await fetch(`${API_CONFIG.API_BASE_URL}/members`);
+    if (!response.ok) {
+      throw new Error(`Failed to load members (Status: ${response.status} ${response.statusText})`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("LibraryAPI fetchMembers Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch available book copies from GET /api/copies/available
+ * @returns {Promise<Array>} Array of available copy records [{ copy_id, copy_code, book_id, title, isbn }]
+ */
+async function fetchAvailableCopies() {
+  try {
+    const response = await fetch(`${API_CONFIG.API_BASE_URL}/copies/available`);
+    if (!response.ok) {
+      throw new Error(`Failed to load available copies (Status: ${response.status} ${response.statusText})`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("LibraryAPI fetchAvailableCopies Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Issue a book copy to a member via POST /api/loans
+ * @param {number|string} memberId 
+ * @param {number|string} copyId 
+ * @returns {Promise<Object>} API response
+ */
+async function issueLoan(memberId, copyId) {
+  try {
+    const response = await fetch(`${API_CONFIG.API_BASE_URL}/loans`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        member_id: Number(memberId),
+        copy_id: Number(copyId)
+      })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || `Could not issue book (Status: ${response.status})`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("LibraryAPI issueLoan Error:", error);
+    throw error;
+  }
+}
+
 // Expose API module globally to window.LibraryAPI
 // (Works seamlessly with plain HTML script tags without CORS module restrictions)
 window.LibraryAPI = {
   config: API_CONFIG,
   mockData: MOCK_BOOKS,
   fetchBooks: fetchBooks,
+  fetchActiveLoans: fetchActiveLoans,
+  returnLoan: returnLoan,
+  fetchMembers: fetchMembers,
+  fetchAvailableCopies: fetchAvailableCopies,
+  issueLoan: issueLoan,
   
   // Helpers for testing states easily
   setForceError: function(value) {
