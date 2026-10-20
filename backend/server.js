@@ -228,6 +228,110 @@ app.get("/api/copies/available", async (req, res) => {
   }
 });
 
+app.post("/api/books", async (req, res) => {
+  const title = String(req.body.title || "").trim();
+  const isbn = String(req.body.isbn || "").trim() || null;
+  const publisher = String(req.body.publisher || "").trim() || null;
+  const copyCode = String(req.body.copy_code || "").trim();
+
+  const yearValue = req.body.publication_year;
+  const publicationYear =
+    yearValue === "" || yearValue === null || yearValue === undefined
+      ? null
+      : Number(yearValue);
+
+  const authorNames = Array.isArray(req.body.authors)
+    ? [...new Set(req.body.authors.map(name => String(name).trim()).filter(Boolean))]
+    : [];
+
+  if (!title || title.length > 200) {
+    return res.status(400).json({ error: "A title of up to 200 characters is required." });
+  }
+
+  if (isbn && isbn.length > 20) {
+    return res.status(400).json({ error: "ISBN must be 20 characters or fewer." });
+  }
+
+  if (publisher && publisher.length > 100) {
+    return res.status(400).json({ error: "Publisher must be 100 characters or fewer." });
+  }
+
+  if (!copyCode || copyCode.length > 30) {
+    return res.status(400).json({ error: "A copy code of up to 30 characters is required." });
+  }
+
+  if (
+    publicationYear !== null &&
+    (!Number.isInteger(publicationYear) || publicationYear < 1000 || publicationYear > 2100)
+  ) {
+    return res.status(400).json({ error: "Enter a valid publication year." });
+  }
+
+  if (authorNames.some(name => name.length > 120)) {
+    return res.status(400).json({ error: "Author names must be 120 characters or fewer." });
+  }
+
+  let connection;
+
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [bookResult] = await connection.query(
+      `INSERT INTO books (isbn, title, publisher, publication_year)
+       VALUES (?, ?, ?, ?)`,
+      [isbn, title, publisher, publicationYear]
+    );
+
+    const bookId = bookResult.insertId;
+
+    for (const authorName of authorNames) {
+      await connection.query(
+        "INSERT IGNORE INTO authors (full_name) VALUES (?)",
+        [authorName]
+      );
+
+      const [authorRows] = await connection.query(
+        "SELECT author_id FROM authors WHERE full_name = ?",
+        [authorName]
+      );
+
+      if (authorRows.length > 0) {
+        await connection.query(
+          "INSERT INTO book_authors (book_id, author_id) VALUES (?, ?)",
+          [bookId, authorRows[0].author_id]
+        );
+      }
+    }
+
+    const [copyResult] = await connection.query(
+      "INSERT INTO book_copies (book_id, copy_code) VALUES (?, ?)",
+      [bookId, copyCode]
+    );
+
+    await connection.commit();
+
+    res.status(201).json({
+      message: "Book and first copy added successfully.",
+      book_id: bookId,
+      copy_id: copyResult.insertId
+    });
+  } catch (error) {
+    if (connection) await connection.rollback();
+
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({
+        error: "That ISBN or copy code is already in use."
+      });
+    }
+
+    console.error("Could not add book:", error.message);
+    res.status(500).json({ error: "Could not add the book." });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
 app.listen(port, () => {
   console.log(`Library API is running at http://localhost:${port}`);
 });
