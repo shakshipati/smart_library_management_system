@@ -116,12 +116,201 @@
           </div>
         </div>
 
-        <!-- Filter Chips Toolbar -->
+        <!-- Filter Chips Toolbar & Librarian Action -->
         <div class="controls-toolbar">
           <div class="filter-chips" role="radiogroup" aria-label="Filter books by availability">
             <button class="chip active" data-filter="all" role="radio" aria-checked="true">All Books</button>
             <button class="chip" data-filter="available" role="radio" aria-checked="false">Available Only</button>
             <button class="chip" data-filter="unavailable" role="radio" aria-checked="false">Checked Out</button>
+          </div>
+          <div class="toolbar-actions">
+            <button id="toolbarAddBookBtn" class="btn-primary btn-sm" type="button" title="Add a new book to catalogue">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span>Add a Book</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Catalogue Management: Add a Book Section -->
+      <section class="catalogue-management-section" id="addBookSection" aria-label="Catalogue Management: Add a Book">
+        <div class="management-card">
+          <div class="management-header">
+            <div class="management-header-title">
+              <div class="management-pill">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+                <span>Catalogue Management</span>
+              </div>
+              <h3 class="management-title">Add a Book</h3>
+              <p class="management-subtitle">Register a new title, authors, and first physical copy code into the live campus catalogue</p>
+            </div>
+            <button type="button" id="toggleAddBookBtn" class="btn-secondary btn-sm" aria-expanded="true" aria-controls="addBookFormContainer" title="Toggle form visibility">
+              <svg class="toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+              <span class="toggle-text">Collapse Form</span>
+            </button>
+          </div>
+
+          <!-- Status feedback banner -->
+          <div id="addBookFeedback" class="management-feedback hidden" role="status" aria-live="polite"></div>
+
+          <!-- Add Book Form Container -->
+          <div id="addBookFormContainer" class="management-form-container">
+            <form id="addBookForm" novalidate>
+              <div class="form-grid">
+                <!-- Title (Required, max 200 chars) -->
+                <div class="form-group grid-col-full">
+                  <label for="addBookTitle" class="form-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+                      <path d="M6 6h10"/>
+                      <path d="M6 10h10"/>
+                    </svg>
+                    <span>Title *</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    id="addBookTitle" 
+                    name="title" 
+                    class="form-input" 
+                    maxlength="200" 
+                    required 
+                    placeholder="e.g. Operating System Concepts"
+                    autocomplete="off"
+                  >
+                  <span class="form-hint">Required, up to 200 characters</span>
+                </div>
+
+                <!-- ISBN (Optional, max 20 chars) -->
+                <div class="form-group">
+                  <label for="addBookIsbn" class="form-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="4" y1="9" x2="20" y2="9"/>
+                      <line x1="4" y1="15" x2="20" y2="15"/>
+                      <line x1="10" y1="3" x2="8" y2="21"/>
+                      <line x1="16" y1="3" x2="14" y2="21"/>
+                    </svg>
+                    <span>ISBN</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    id="addBookIsbn" 
+                    name="isbn" 
+                    class="form-input" 
+                    maxlength="20" 
+                    placeholder="e.g. 978-1119800361"
+                    autocomplete="off"
+                  >
+                  <span class="form-hint">Optional, max 20 characters</span>
+                </div>
+
+                <!-- Publisher (Optional, max 100 chars) -->
+                <div class="form-group">
+                  <label for="addBookPublisher" class="form-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                    </svg>
+                    <span>Publisher</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    id="addBookPublisher" 
+                    name="publisher" 
+                    class="form-input" 
+                    maxlength="100" 
+                    placeholder="e.g. Wiley"
+                    autocomplete="off"
+                  >
+                  <span class="form-hint">Optional, max 100 characters</span>
+                </div>
+
+                <!-- Publication Year (Optional, 1000–2100) -->
+                <div class="form-group">
+                  <label for="addBookYear" class="form-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <span>Publication Year</span>
+                  </label>
+                  <input 
+                    type="number" 
+                    id="addBookYear" 
+                    name="publication_year" 
+                    class="form-input" 
+                    min="1000" 
+                    max="2100" 
+                    step="1"
+                    placeholder="e.g. 2021"
+                  >
+                  <span class="form-hint">Optional, 1000–2100</span>
+                </div>
+
+                <!-- First Physical Copy Code (Required, max 30 chars) -->
+                <div class="form-group">
+                  <label for="addBookCopyCode" class="form-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                      <line x1="7" y1="7" x2="7.01" y2="7"/>
+                    </svg>
+                    <span>First Physical Copy Code *</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    id="addBookCopyCode" 
+                    name="copy_code" 
+                    class="form-input" 
+                    maxlength="30" 
+                    required 
+                    placeholder="e.g. LIB-OS-001"
+                    autocomplete="off"
+                  >
+                  <span class="form-hint">Required, max 30 characters</span>
+                </div>
+
+                <!-- Authors (Optional, one name per line, max 120 chars each) -->
+                <div class="form-group grid-col-full">
+                  <label for="addBookAuthors" class="form-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <span>Authors</span>
+                  </label>
+                  <textarea 
+                    id="addBookAuthors" 
+                    name="authors" 
+                    class="form-textarea" 
+                    rows="3" 
+                    placeholder="Abraham Silberschatz&#10;Peter B. Galvin&#10;Greg Gagne"
+                  ></textarea>
+                  <span class="form-hint">Optional. One author name per line, up to 120 characters each</span>
+                </div>
+              </div>
+
+              <!-- Form Action Buttons -->
+              <div class="form-actions">
+                <button type="submit" id="addBookSubmitBtn" class="btn-primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  <span>Add Book</span>
+                </button>
+                <button type="button" id="addBookResetBtn" class="btn-secondary">Clear Form</button>
+              </div>
+            </form>
           </div>
         </div>
       </section>

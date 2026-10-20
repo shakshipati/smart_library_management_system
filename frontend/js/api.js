@@ -258,7 +258,23 @@ async function issueLoan(memberId, copyId) {
     throw error;
   }
 }
+async function addBook(book) {
+  const response = await fetch(`${API_CONFIG.API_BASE_URL}/books`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(book)
+  });
 
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || `Could not add book (Status: ${response.status})`);
+  }
+
+  return data;
+}
 // Expose API module globally to window.LibraryAPI
 // (Works seamlessly with plain HTML script tags without CORS module restrictions)
 window.LibraryAPI = {
@@ -270,6 +286,7 @@ window.LibraryAPI = {
   fetchMembers: fetchMembers,
   fetchAvailableCopies: fetchAvailableCopies,
   issueLoan: issueLoan,
+  addBook: addBook,
   
   // Helpers for testing states easily
   setForceError: function(value) {
