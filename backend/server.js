@@ -331,7 +331,46 @@ app.post("/api/books", async (req, res) => {
     if (connection) connection.release();
   }
 });
+ app.post("/api/members", async (req, res) => {
+  const fullName = String(req.body.full_name || "").trim();
+  const email = String(req.body.email || "").trim().toLowerCase();
+  const memberType = String(req.body.member_type || "").trim().toLowerCase();
 
+  if (!fullName || fullName.length > 100) {
+    return res.status(400).json({ error: "Enter a name of up to 100 characters." });
+  }
+
+  if (
+    email.length > 120 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
+    return res.status(400).json({ error: "Enter a valid email address." });
+  }
+
+  if (!["student", "faculty"].includes(memberType)) {
+    return res.status(400).json({ error: "Member type must be student or faculty." });
+  }
+
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO members (full_name, email, member_type)
+       VALUES (?, ?, ?)`,
+      [fullName, email, memberType]
+    );
+
+    res.status(201).json({
+      message: "Member registered successfully.",
+      member_id: result.insertId
+    });
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ error: "That email is already registered." });
+    }
+
+    console.error("Could not register member:", error.message);
+    res.status(500).json({ error: "Could not register member." });
+  }
+});
 app.listen(port, () => {
   console.log(`Library API is running at http://localhost:${port}`);
 });

@@ -275,6 +275,23 @@ async function addBook(book) {
 
   return data;
 }
+async function registerMember(member) {
+  const response = await fetch(`${API_CONFIG.API_BASE_URL}/members`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(member)
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || `Could not register member (Status: ${response.status})`);
+  }
+
+  return data;
+}
 // Expose API module globally to window.LibraryAPI
 // (Works seamlessly with plain HTML script tags without CORS module restrictions)
 window.LibraryAPI = {
@@ -287,6 +304,7 @@ window.LibraryAPI = {
   fetchAvailableCopies: fetchAvailableCopies,
   issueLoan: issueLoan,
   addBook: addBook,
+  registerMember: registerMember,
   
   // Helpers for testing states easily
   setForceError: function(value) {

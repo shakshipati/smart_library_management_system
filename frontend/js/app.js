@@ -99,7 +99,14 @@ const DOM = {
   addBookAuthors: document.getElementById('addBookAuthors'),
   addBookSubmitBtn: document.getElementById('addBookSubmitBtn'),
   addBookResetBtn: document.getElementById('addBookResetBtn'),
-  addBookFeedback: document.getElementById('addBookFeedback')
+  addBookFeedback: document.getElementById('addBookFeedback'),
+
+    memberRegistrationForm: document.getElementById('memberRegistrationForm'),
+  memberFullName: document.getElementById('memberFullName'),
+  memberEmail: document.getElementById('memberEmail'),
+  memberType: document.getElementById('memberType'),
+  memberRegistrationFeedback: document.getElementById('memberRegistrationFeedback'),
+  registerMemberSubmitBtn: document.getElementById('registerMemberSubmitBtn')
 };
 
 // --- Utility Helpers ---
@@ -708,8 +715,39 @@ async function handleAddBookSubmit(event) {
   }
 }
 
-// --- Event Listeners Setup ---
+async function handleMemberRegistration(event) {
+  event.preventDefault();
 
+  if (!DOM.memberRegistrationForm.reportValidity()) return;
+
+  const member = {
+    full_name: DOM.memberFullName.value.trim(),
+    email: DOM.memberEmail.value.trim(),
+    member_type: DOM.memberType.value
+  };
+
+  const originalButtonText = DOM.registerMemberSubmitBtn.textContent;
+  DOM.registerMemberSubmitBtn.disabled = true;
+  DOM.registerMemberSubmitBtn.textContent = 'Registering…';
+
+  try {
+    const result = await window.LibraryAPI.registerMember(member);
+
+    DOM.memberRegistrationFeedback.className = 'loan-feedback success';
+    DOM.memberRegistrationFeedback.textContent = result.message;
+    DOM.memberRegistrationForm.reset();
+
+    await loadIssueOptions();
+    DOM.issueMemberSelect.value = String(result.member_id);
+  } catch (error) {
+    DOM.memberRegistrationFeedback.className = 'loan-feedback error';
+    DOM.memberRegistrationFeedback.textContent = error.message || 'Could not register member.';
+  } finally {
+    DOM.registerMemberSubmitBtn.disabled = false;
+    DOM.registerMemberSubmitBtn.textContent = originalButtonText;
+  }
+}
+// --- Event Listeners Setup ---
 function setupEventListeners() {
   // Navigation Tabs
   DOM.tabCatalogue.addEventListener('click', () => switchSection('catalogue'));
@@ -801,6 +839,7 @@ function setupEventListeners() {
   DOM.addBookResetBtn.addEventListener('click', () => {
     DOM.addBookFeedback.classList.add('hidden');
   });
+    DOM.memberRegistrationForm.addEventListener('submit', handleMemberRegistration);
 }
 
 // Initialize on DOM Content Loaded
