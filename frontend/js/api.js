@@ -164,6 +164,17 @@ async function fetchActiveLoans() {
   }
 }
 
+async function fetchOverdueLoans() {
+  const response = await fetch(`${API_CONFIG.API_BASE_URL}/reports/overdue`);
+  const data = await response.json().catch(() => []);
+
+  if (!response.ok) {
+    throw new Error(data.error || "Could not load overdue loans.");
+  }
+
+  return data;
+}
+
 /**
  * Process book return by loan ID via POST /api/loans/:id/return
  * @param {number|string} loanId
@@ -299,6 +310,7 @@ window.LibraryAPI = {
   mockData: MOCK_BOOKS,
   fetchBooks: fetchBooks,
   fetchActiveLoans: fetchActiveLoans,
+  fetchOverdueLoans: fetchOverdueLoans,
   returnLoan: returnLoan,
   fetchMembers: fetchMembers,
   fetchAvailableCopies: fetchAvailableCopies,

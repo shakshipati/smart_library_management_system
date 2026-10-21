@@ -459,6 +459,31 @@
         <div class="loans-list" id="loansList">
           <!-- Loan cards dynamically injected by app.js -->
         </div>
+        <section class="overdue-report-card" aria-labelledby="overdueReportHeading">
+  <div class="view-header-text">
+    <h3 id="overdueReportHeading">Overdue report</h3>
+    <p class="view-subtitle">Active loans past their due date</p>
+  </div>
+
+  <p id="overdueReportMessage" role="status" aria-live="polite">
+    Loading overdue loans...
+  </p>
+
+  <div class="overdue-table-wrapper">
+    <table class="overdue-table">
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Book</th>
+          <th>Copy</th>
+          <th>Due date</th>
+          <th>Days overdue</th>
+        </tr>
+      </thead>
+      <tbody id="overdueReportRows"></tbody>
+    </table>
+  </div>
+</section>
       </section>
     </div>
 

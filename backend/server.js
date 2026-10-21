@@ -169,25 +169,55 @@ app.post("/api/loans", async (req, res) => {
 app.get("/api/loans/active", async (req, res) => {
   try {
     const [loans] = await pool.query(`
-      SELECT
-        loans.loan_id,
-        members.full_name,
-        books.title,
-        book_copies.copy_code,
-        loans.borrowed_at,
-        loans.due_at
-      FROM loans
-      JOIN members ON loans.member_id = members.member_id
-      JOIN book_copies ON loans.copy_id = book_copies.copy_id
-      JOIN books ON book_copies.book_id = books.book_id
-      WHERE loans.returned_at IS NULL
-      ORDER BY loans.due_at
-    `);
+  SELECT
+    loans.loan_id,
+    members.full_name,
+    books.title,
+    book_copies.copy_code,
+    loans.borrowed_at,
+    loans.due_at,
+    CASE
+      WHEN loans.due_at < NOW() THEN 1
+      ELSE 0
+    END AS is_overdue
+  FROM loans
+  JOIN members ON loans.member_id = members.member_id
+  JOIN book_copies ON loans.copy_id = book_copies.copy_id
+  JOIN books ON book_copies.book_id = books.book_id
+  WHERE loans.returned_at IS NULL
+  ORDER BY loans.due_at
+`);
 
     res.json(loans);
   } catch (error) {
     console.error("Could not load active loans:", error.message);
     res.status(500).json({ error: "Could not load active loans." });
+  }
+});
+
+app.get("/api/reports/overdue", async (req, res) => {
+  try {
+    const [overdueLoans] = await pool.query(`
+      SELECT
+        loans.loan_id,
+        members.full_name,
+        books.title,
+        book_copies.copy_code,
+        loans.due_at,
+        DATEDIFF(NOW(), loans.due_at) AS days_overdue
+      FROM loans
+      JOIN members ON loans.member_id = members.member_id
+      JOIN book_copies ON loans.copy_id = book_copies.copy_id
+      JOIN books ON book_copies.book_id = books.book_id
+      WHERE loans.returned_at IS NULL
+        AND loans.due_at < NOW()
+      ORDER BY loans.due_at ASC
+    `);
+
+    res.json(overdueLoans);
+  } catch (error) {
+    console.error("Could not load overdue loans:", error.message);
+    res.status(500).json({ error: "Could not load overdue loans." });
   }
 });
 

@@ -74,6 +74,8 @@ const DOM = {
   refreshLoansBtn: document.getElementById('refreshLoansBtn'),
   retryLoansBtn: document.getElementById('retryLoansBtn'),
   loanFeedback: document.getElementById('loanFeedback'),
+  overdueReportMessage: document.getElementById('overdueReportMessage'),
+  overdueReportRows: document.getElementById('overdueReportRows'),
 
   // Issue a Book Elements
   issueFeedback: document.getElementById('issueFeedback'),
@@ -215,6 +217,7 @@ function switchSection(section) {
     DOM.tabLoans.classList.add('active');
     DOM.tabLoans.setAttribute('aria-selected', 'true');
     DOM.loansView.classList.remove('hidden');
+    loadActiveLoans();
   } else if (section === 'issue') {
     DOM.tabIssue.classList.add('active');
     DOM.tabIssue.setAttribute('aria-selected', 'true');
@@ -408,6 +411,7 @@ function setLoansViewState(viewState, customMessage = '') {
 
     case 'empty':
       DOM.loansEmptyState.classList.remove('hidden');
+      DOM.loansContent.classList.remove('hidden');
       break;
 
     case 'success':
@@ -421,6 +425,7 @@ function setLoansViewState(viewState, customMessage = '') {
  */
 async function loadActiveLoans() {
   setLoansViewState('loading');
+  loadOverdueReport();
 
   try {
     const loans = await window.LibraryAPI.fetchActiveLoans();
@@ -445,13 +450,47 @@ async function loadActiveLoans() {
 }
 
 /**
+ * Fetch and render the overdue report from GET /api/reports/overdue
+ */
+async function loadOverdueReport() {
+  DOM.overdueReportMessage.textContent = 'Loading overdue loans...';
+  DOM.overdueReportRows.innerHTML = '';
+
+  try {
+    const overdueLoans = await window.LibraryAPI.fetchOverdueLoans();
+    if (!Array.isArray(overdueLoans)) {
+      throw new Error('Unexpected response while loading overdue loans.');
+    }
+
+    if (overdueLoans.length === 0) {
+      DOM.overdueReportMessage.textContent = 'No overdue loans';
+      return;
+    }
+
+    DOM.overdueReportRows.innerHTML = overdueLoans.map(loan => `
+      <tr>
+        <td>${escapeHtml(loan.full_name || 'Anonymous Member')}</td>
+        <td>${escapeHtml(loan.title || 'Untitled Book')}</td>
+        <td>${escapeHtml(loan.copy_code || 'N/A')}</td>
+        <td>${escapeHtml(formatDate(loan.due_at))}</td>
+        <td>${escapeHtml(loan.days_overdue ?? 'N/A')}</td>
+      </tr>
+    `).join('');
+    DOM.overdueReportMessage.textContent = '';
+  } catch (error) {
+    console.error('Error loading overdue report:', error);
+    DOM.overdueReportMessage.textContent = `Could not load overdue loans: ${error.message || 'Please try again.'}`;
+  }
+}
+
+/**
  * Render active loan cards
  */
 function renderActiveLoans(loans) {
   DOM.loansList.innerHTML = '';
 
   const html = loans.map(loan => {
-    const isOverdue = checkOverdue(loan.due_at);
+    const isOverdue = Number(loan.is_overdue) === 1;
     const borrowedFormatted = formatDate(loan.borrowed_at);
     const dueFormatted = formatDate(loan.due_at);
 
