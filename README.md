@@ -44,6 +44,14 @@ Prerequisites: Node.js/npm and a running MySQL 5.5 server.
 
    The script creates and selects the `smart_campus_library` database. It is intended for a fresh database. It contains `DROP TABLE IF EXISTS` statements, so running it where these tables already exist drops and recreates them and can destroy existing data; do not use it on a database you need to preserve.
 
+   Optionally, load the fictional demo members, books, authors, author links, and available copies by running this at the same MySQL prompt after the schema:
+
+   ```sql
+   source C:/path/to/smart-campus-library/database/seed.sql;
+   ```
+
+   The seed can be run more than once and does not create loans; all demo copies start as available.
+
 3. In the current `backend` folder, create `.env` (for example, with `notepad .env`) and set the values for your local environment:
 
    ```dotenv
@@ -96,6 +104,7 @@ There is no configured start or test script in `backend/package.json`; run the s
 ```text
 database/
   schema.sql
+  seed.sql
 backend/
   package.json
   server.js
