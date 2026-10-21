@@ -21,7 +21,7 @@ Express serves the static frontend from `frontend/` and exposes the API on port 
 
 ## Setup and run (Windows PowerShell)
 
-Prerequisites: Node.js/npm and a running MySQL server with the project database and tables available.
+Prerequisites: Node.js/npm and a running MySQL 5.5 server.
 
 1. Open PowerShell in the repository root and install backend dependencies:
 
@@ -30,27 +30,41 @@ Prerequisites: Node.js/npm and a running MySQL server with the project database 
    npm install
    ```
 
-2. In the current `backend` folder, create `.env` (for example, with `notepad .env`) and set the values for your local environment:
+2. Load the schema into a fresh MySQL 5.5 database. From PowerShell, start the MySQL command-line client:
+
+   ```powershell
+   mysql -u <your-mysql-user> -p
+   ```
+
+   At the MySQL prompt, run `source` with the path to the schema file. Replace the clearly marked placeholder path with the absolute path on your computer:
+
+   ```sql
+   source C:/path/to/smart-campus-library/database/schema.sql;
+   ```
+
+   The script creates and selects the `smart_campus_library` database. It is intended for a fresh database. It contains `DROP TABLE IF EXISTS` statements, so running it where these tables already exist drops and recreates them and can destroy existing data; do not use it on a database you need to preserve.
+
+3. In the current `backend` folder, create `.env` (for example, with `notepad .env`) and set the values for your local environment:
 
    ```dotenv
    PORT=3000
    DB_HOST=<your-mysql-host>
    DB_USER=<your-mysql-user>
    DB_PASSWORD=<your-mysql-password>
-   DB_NAME=<your-database-name>
+   DB_NAME=smart_campus_library
    ```
 
    Keep real credentials local and do not commit `.env`.
 
-3. Ensure the MySQL database and required tables are set up, then start the API and static frontend server:
+4. Start the API and static frontend server:
 
    ```powershell
    node .\server.js
    ```
 
-4. Open [http://localhost:3000/](http://localhost:3000/) in a browser.
+5. Open [http://localhost:3000/](http://localhost:3000/) in a browser.
 
-**Setup item to verify:** No SQL schema or migration file is included in the repository. Create or obtain the database schema separately before running the application. The backend expects tables named `books`, `authors`, `book_authors`, `book_copies`, `members`, and `loans`, with columns used by the queries below. Exact column definitions, foreign keys, unique constraints, and SQL setup instructions must be verified against the database used for the project.
+**Setup item to verify:** Ensure the MySQL server is reachable with the host and user configured in `backend\.env`, and that the account has permission to create and use the database.
 
 There is no configured start or test script in `backend/package.json`; run the server directly with `node .\server.js`.
 
@@ -71,15 +85,17 @@ There is no configured start or test script in `backend/package.json`; run the s
 ## Database engineering concepts
 
 - **Relational structure and normalization:** Books, authors, members, physical copies, and loans are queried as separate entities. The `book_authors` association table supports the many-to-many relationship between books and authors; copies belong to books, and loans associate members with copies.
-- **Keys and constraints:** Queries use entity ID columns such as `book_id`, `author_id`, `member_id`, `copy_id`, and `loan_id` to identify and join records. API validation checks required values and handles duplicate-entry conflicts for ISBNs, copy codes, and member email addresses. **Verify:** the actual primary-key, foreign-key, unique, and check constraint definitions in the MySQL schema; the schema DDL is not included.
+- **Keys and constraints:** The schema defines primary keys, foreign keys between related entities, unique ISBN, copy-code, member-email, and author-name constraints, and a composite primary key for `book_authors`. API validation checks required values and handles duplicate-entry conflicts. The schema does not define `CHECK` constraints.
 - **Checkout and return transactions:** Checkout inserts a loan and marks its copy borrowed within one transaction. Return marks the loan returned and the copy available within one transaction. Both paths commit on success and roll back on failure.
 - **Concurrency handling:** Checkout selects the copy `FOR UPDATE` and checks that it is still available before creating the loan. Return locks the loan row and checks that it has not already been returned. This prevents competing requests from silently checking out the same copy or returning the same loan twice.
 - **Overdue reporting:** The report selects active loans with `due_at < NOW()` and calculates `days_overdue` with MySQL `DATEDIFF`.
-- **Indexes and `EXPLAIN`:** The overdue report uses `idx_loans_due_returned` on `loans`, with `eq_ref` primary-key lookups for joined tables. `EXPLAIN` can be applied to the report query to inspect this plan. The schema and saved `EXPLAIN` output are not included, so verify this plan against the target database if reproducing the analysis.
+- **Indexes and `EXPLAIN`:** The overdue report uses `idx_loans_due_returned` on `loans`, with `eq_ref` primary-key lookups for joined tables. `EXPLAIN` can be applied to the report query to inspect its plan; verify the plan on the target database.
 
 ## Repository layout
 
 ```text
+database/
+  schema.sql
 backend/
   package.json
   server.js
