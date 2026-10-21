@@ -88,7 +88,18 @@ const DOM = {
   noCopiesAlert: document.getElementById('noCopiesAlert'),
   calculatedDueDate: document.getElementById('calculatedDueDate'),
   issueSubmitBtn: document.getElementById('issueSubmitBtn'),
-  issueResetBtn: document.getElementById('issueResetBtn')
+  issueResetBtn: document.getElementById('issueResetBtn'),
+
+    addBookForm: document.getElementById('addBookForm'),
+  addBookTitle: document.getElementById('addBookTitle'),
+  addBookIsbn: document.getElementById('addBookIsbn'),
+  addBookPublisher: document.getElementById('addBookPublisher'),
+  addBookYear: document.getElementById('addBookYear'),
+  addBookCopyCode: document.getElementById('addBookCopyCode'),
+  addBookAuthors: document.getElementById('addBookAuthors'),
+  addBookSubmitBtn: document.getElementById('addBookSubmitBtn'),
+  addBookResetBtn: document.getElementById('addBookResetBtn'),
+  addBookFeedback: document.getElementById('addBookFeedback')
 };
 
 // --- Utility Helpers ---
@@ -155,6 +166,17 @@ function showIssueFeedback(message, type = 'success') {
   clearTimeout(DOM.issueFeedback._timer);
   DOM.issueFeedback._timer = setTimeout(() => {
     DOM.issueFeedback.classList.add('hidden');
+  }, 6000);
+}
+
+function showBookFeedback(message, type = 'success') {
+  DOM.addBookFeedback.className = `loan-feedback ${type}`;
+  DOM.addBookFeedback.textContent = message;
+  DOM.addBookFeedback.classList.remove('hidden');
+
+  clearTimeout(DOM.addBookFeedback._timer);
+  DOM.addBookFeedback._timer = setTimeout(() => {
+    DOM.addBookFeedback.classList.add('hidden');
   }, 6000);
 }
 
@@ -639,6 +661,53 @@ async function handleIssueSubmit(event) {
   }
 }
 
+async function handleAddBookSubmit(event) {
+  event.preventDefault();
+
+  if (!DOM.addBookForm.reportValidity()) return;
+
+  const authors = DOM.addBookAuthors.value
+    .split(/\r?\n/)
+    .map(name => name.trim())
+    .filter(Boolean);
+
+  if (authors.some(name => name.length > 120)) {
+    showBookFeedback('Each author name must be 120 characters or fewer.', 'error');
+    return;
+  }
+
+  const yearText = DOM.addBookYear.value.trim();
+
+  const book = {
+    title: DOM.addBookTitle.value.trim(),
+    isbn: DOM.addBookIsbn.value.trim() || null,
+    publisher: DOM.addBookPublisher.value.trim() || null,
+    publication_year: yearText ? Number(yearText) : null,
+    authors,
+    copy_code: DOM.addBookCopyCode.value.trim()
+  };
+
+  const originalButton = DOM.addBookSubmitBtn.innerHTML;
+  DOM.addBookSubmitBtn.disabled = true;
+  DOM.addBookSubmitBtn.textContent = 'Saving…';
+
+  try {
+    const result = await window.LibraryAPI.addBook(book);
+    showBookFeedback(result.message, 'success');
+    DOM.addBookForm.reset();
+
+    await Promise.all([
+      loadBooks(),
+      loadIssueOptions()
+    ]);
+  } catch (error) {
+    showBookFeedback(error.message || 'Could not add the book.', 'error');
+  } finally {
+    DOM.addBookSubmitBtn.disabled = false;
+    DOM.addBookSubmitBtn.innerHTML = originalButton;
+  }
+}
+
 // --- Event Listeners Setup ---
 
 function setupEventListeners() {
@@ -725,6 +794,12 @@ function setupEventListeners() {
   });
   DOM.retryIssueOptionsBtn.addEventListener('click', () => {
     loadIssueOptions();
+  });
+
+    DOM.addBookForm.addEventListener('submit', handleAddBookSubmit);
+
+  DOM.addBookResetBtn.addEventListener('click', () => {
+    DOM.addBookFeedback.classList.add('hidden');
   });
 }
 
