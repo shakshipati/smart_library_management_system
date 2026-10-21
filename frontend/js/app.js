@@ -102,12 +102,17 @@ const DOM = {
   addBookSubmitBtn: document.getElementById('addBookSubmitBtn'),
   addBookResetBtn: document.getElementById('addBookResetBtn'),
   addBookFeedback: document.getElementById('addBookFeedback'),
+  toggleAddBookBtn: document.getElementById('toggleAddBookBtn'),
+  toggleAddBookIcon: document.querySelector('#toggleAddBookBtn .toggle-icon'),
+  addBookFormContainer: document.getElementById('addBookFormContainer'),
 
     memberRegistrationForm: document.getElementById('memberRegistrationForm'),
   memberFullName: document.getElementById('memberFullName'),
   memberEmail: document.getElementById('memberEmail'),
   memberType: document.getElementById('memberType'),
   memberRegistrationFeedback: document.getElementById('memberRegistrationFeedback'),
+  registeredMembersMessage: document.getElementById('registeredMembersMessage'),
+  registeredMembersList: document.getElementById('registeredMembersList'),
   registerMemberSubmitBtn: document.getElementById('registerMemberSubmitBtn')
 };
 
@@ -378,12 +383,45 @@ function renderBookCards(books) {
             <span class="meta-label">Copies Available:</span>
             <span class="meta-value ${isAvailable ? 'text-success' : ''}"><strong>${availableCopies}</strong> / ${totalCopies} total</span>
           </div>
+          <button type="button" class="btn-remove-book" data-book-id="${escapeHtml(String(book.book_id))}" data-book-title="${escapeHtml(book.title || 'this book')}" aria-label="Remove ${escapeHtml(book.title || 'this book')} from catalogue">
+            Remove book
+          </button>
         </div>
       </article>
     `;
   }).join('');
 
   DOM.booksGrid.innerHTML = cardsHtml;
+}
+
+async function handleRemoveBook(button) {
+  const bookId = button.getAttribute('data-book-id');
+  const bookTitle = button.getAttribute('data-book-title') || 'this book';
+  if (!bookId) return;
+
+  if (!window.confirm(`Remove "${bookTitle}" from the catalogue? Books with any loan history cannot be removed.`)) {
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Removing...';
+  showBookFeedback(`Removing "${bookTitle}"...`, 'success');
+  DOM.addBookFeedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  try {
+    const result = await window.LibraryAPI.deleteBook(bookId);
+    showBookFeedback(result.message || 'Book removed successfully.', 'success');
+    DOM.addBookFeedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    await loadBooks();
+  } catch (error) {
+    console.error('Could not remove book:', error);
+    showBookFeedback(error.message || 'Could not remove the book.', 'error');
+    DOM.addBookFeedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (button.isConnected) {
+      button.disabled = false;
+      button.textContent = 'Remove book';
+    }
+  }
 }
 
 // --- View 2: Books Issued (Active Loans) Logic ---
@@ -453,6 +491,7 @@ async function loadActiveLoans() {
  * Fetch and render the overdue report from GET /api/reports/overdue
  */
 async function loadOverdueReport() {
+  DOM.overdueReportMessage.className = 'report-message';
   DOM.overdueReportMessage.textContent = 'Loading overdue loans...';
   DOM.overdueReportRows.innerHTML = '';
 
@@ -479,12 +518,13 @@ async function loadOverdueReport() {
     DOM.overdueReportMessage.textContent = '';
   } catch (error) {
     console.error('Error loading overdue report:', error);
+    DOM.overdueReportMessage.className = 'report-message error';
     DOM.overdueReportMessage.textContent = `Could not load overdue loans: ${error.message || 'Please try again.'}`;
   }
 }
 
 /**
- * Render active loan cards
+ * Render active loans in the circulation table
  */
 function renderActiveLoans(loans) {
   DOM.loansList.innerHTML = '';
@@ -495,57 +535,44 @@ function renderActiveLoans(loans) {
     const dueFormatted = formatDate(loan.due_at);
 
     return `
-      <article class="loan-card" data-loan-id="${loan.loan_id}">
-        <div class="loan-main-info">
-          <!-- Title & Copy Code -->
-          <div class="loan-title-row">
-            <h3 class="loan-book-title">${escapeHtml(loan.title || 'Untitled Book')}</h3>
-            <span class="copy-badge" title="Copy Code">${escapeHtml(loan.copy_code || 'Copy')}</span>
-          </div>
-
-          <!-- Borrower Member & Dates -->
-          <div class="loan-details">
-            <div class="loan-detail-item" title="Borrower">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-              <span><strong>Member:</strong> ${escapeHtml(loan.full_name || 'Anonymous Member')}</span>
-            </div>
-
-            <div class="loan-detail-item" title="Date Borrowed">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              <span><strong>Borrowed:</strong> ${borrowedFormatted}</span>
-            </div>
-
-            <div class="loan-detail-item" title="Due Date">
-              <span class="due-pill ${isOverdue ? 'due-overdue' : 'due-normal'}">
-                ${isOverdue ? '⚠️ Overdue: ' : 'Due: '}${dueFormatted}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Return Action Button -->
-        <div class="loan-actions">
-          <button class="btn-return" data-loan-id="${loan.loan_id}" data-book-title="${escapeHtml(loan.title || 'Book')}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <tr>
+        <td>
+          <span class="table-primary-text">${escapeHtml(loan.title || 'Untitled Book')}</span>
+          <span class="copy-badge">${escapeHtml(loan.copy_code || 'Copy')}</span>
+        </td>
+        <td>${escapeHtml(loan.full_name || 'Anonymous Member')}</td>
+        <td>${escapeHtml(borrowedFormatted)}</td>
+        <td><span class="due-pill ${isOverdue ? 'due-overdue' : 'due-normal'}">${isOverdue ? 'Overdue · ' : ''}${escapeHtml(dueFormatted)}</span></td>
+        <td class="table-action-cell">
+          <button class="btn-return" data-loan-id="${escapeHtml(String(loan.loan_id))}" data-book-title="${escapeHtml(loan.title || 'Book')}" aria-label="Return ${escapeHtml(loan.title || 'Book')}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polyline points="9 14 4 9 9 4"/>
               <path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
             </svg>
             <span>Return</span>
           </button>
-        </div>
-      </article>
+        </td>
+      </tr>
     `;
   }).join('');
 
-  DOM.loansList.innerHTML = html;
+  DOM.loansList.innerHTML = `
+    <div class="table-wrapper" role="region" aria-label="Active book loans table" tabindex="0">
+      <table class="data-table loans-table">
+        <caption class="visually-hidden">Active book loans</caption>
+        <thead>
+          <tr>
+            <th scope="col">Book / Copy</th>
+            <th scope="col">Member</th>
+            <th scope="col">Checked out</th>
+            <th scope="col">Due date</th>
+            <th scope="col" aria-label="Actions"></th>
+          </tr>
+        </thead>
+        <tbody>${html}</tbody>
+      </table>
+    </div>
+  `;
 }
 
 /**
@@ -613,6 +640,7 @@ async function loadIssueOptions() {
 
     state.members = Array.isArray(members) ? members : [];
     state.availableCopies = Array.isArray(availableCopies) ? availableCopies : [];
+    renderRegisteredMembers(state.members);
 
     // 1. Populate Member Select
     if (state.members.length === 0) {
@@ -653,9 +681,79 @@ async function loadIssueOptions() {
 
   } catch (error) {
     console.error("Error loading issue options:", error);
+    DOM.registeredMembersMessage.textContent = `Could not load members: ${error.message || 'Please try again.'}`;
+    DOM.registeredMembersList.innerHTML = '';
     DOM.issueLoadingState.classList.add('hidden');
     DOM.issueErrorMessage.textContent = error.message || 'Could not load members or available copies from database.';
     DOM.issueErrorState.classList.remove('hidden');
+  }
+}
+
+function renderRegisteredMembers(members) {
+  DOM.registeredMembersList.innerHTML = '';
+
+  if (members.length === 0) {
+    DOM.registeredMembersMessage.className = 'member-list-message';
+    DOM.registeredMembersMessage.textContent = 'No registered members.';
+    return;
+  }
+
+  DOM.registeredMembersMessage.className = 'member-list-message';
+  DOM.registeredMembersMessage.textContent = '';
+  DOM.registeredMembersList.innerHTML = `
+    <div class="table-wrapper" role="region" aria-label="Registered members table" tabindex="0">
+      <table class="data-table members-table">
+        <caption class="visually-hidden">Registered library members</caption>
+        <thead>
+          <tr>
+            <th scope="col">Member</th>
+            <th scope="col">Type</th>
+            <th scope="col" aria-label="Actions"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${members.map(member => `
+            <tr>
+              <td class="member-name">${escapeHtml(member.full_name || 'Unnamed member')}</td>
+              <td>${escapeHtml(member.member_type ? member.member_type.toUpperCase() : 'MEMBER')}</td>
+              <td class="table-action-cell">
+                <button type="button" class="btn-remove-member" data-member-id="${escapeHtml(String(member.member_id))}" data-member-name="${escapeHtml(member.full_name || 'this member')}" aria-label="Remove ${escapeHtml(member.full_name || 'this member')}">
+                  Remove
+                </button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function handleRemoveMember(button) {
+  const memberId = button.getAttribute('data-member-id');
+  const memberName = button.getAttribute('data-member-name') || 'this member';
+  if (!memberId) return;
+
+  if (!window.confirm(`Remove ${memberName}? Members with any loan history cannot be removed.`)) {
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Removing...';
+
+  try {
+    const result = await window.LibraryAPI.deleteMember(memberId);
+    await loadIssueOptions();
+    DOM.registeredMembersMessage.className = 'member-list-message success';
+    DOM.registeredMembersMessage.textContent = result.message || 'Member removed successfully.';
+  } catch (error) {
+    console.error('Could not remove member:', error);
+    DOM.registeredMembersMessage.className = 'member-list-message error';
+    DOM.registeredMembersMessage.textContent = error.message || 'Could not remove the member.';
+    if (button.isConnected) {
+      button.disabled = false;
+      button.textContent = 'Remove';
+    }
   }
 }
 
@@ -845,6 +943,21 @@ function setupEventListeners() {
     applySearchAndFilter();
   });
 
+  // Catalogue: Remove Book Button (Event Delegation)
+  DOM.booksGrid.addEventListener('click', (event) => {
+    const removeButton = event.target.closest('.btn-remove-book');
+    if (removeButton && !removeButton.disabled) {
+      handleRemoveBook(removeButton);
+    }
+  });
+
+  DOM.registeredMembersList.addEventListener('click', (event) => {
+    const removeButton = event.target.closest('.btn-remove-member');
+    if (removeButton && !removeButton.disabled) {
+      handleRemoveMember(removeButton);
+    }
+  });
+
   // Books Issued: Return Button (Event Delegation)
   DOM.loansList.addEventListener('click', (event) => {
     const returnBtn = event.target.closest('.btn-return');
@@ -871,6 +984,17 @@ function setupEventListeners() {
   });
   DOM.retryIssueOptionsBtn.addEventListener('click', () => {
     loadIssueOptions();
+  });
+
+  DOM.toggleAddBookBtn.addEventListener('click', () => {
+    const isExpanded = DOM.toggleAddBookBtn.getAttribute('aria-expanded') === 'true';
+    const nextExpanded = !isExpanded;
+
+    DOM.addBookFormContainer.classList.toggle('hidden', !nextExpanded);
+    DOM.toggleAddBookBtn.setAttribute('aria-expanded', String(nextExpanded));
+    DOM.toggleAddBookBtn.querySelector('.toggle-text').textContent =
+      nextExpanded ? 'Collapse Form' : 'Expand Form';
+    DOM.toggleAddBookIcon.classList.toggle('is-collapsed', !nextExpanded);
   });
 
     DOM.addBookForm.addEventListener('submit', handleAddBookSubmit);

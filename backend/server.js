@@ -55,6 +55,75 @@ app.get("/api/books", async (req, res) => {
     res.status(500).json({ error: "Could not load books from the database." });
   }
 });
+
+app.delete("/api/books/:id", async (req, res) => {
+  const bookId = Number(req.params.id);
+  let connection;
+
+  if (!Number.isInteger(bookId) || bookId < 1) {
+    return res.status(400).json({ error: "Invalid book ID." });
+  }
+
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [books] = await connection.query(
+      "SELECT book_id FROM books WHERE book_id = ? FOR UPDATE",
+      [bookId]
+    );
+
+    if (books.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: "Book not found." });
+    }
+
+    await connection.query(
+      "SELECT copy_id FROM book_copies WHERE book_id = ? FOR UPDATE",
+      [bookId]
+    );
+
+    const [loanReferences] = await connection.query(
+      `SELECT loans.loan_id
+       FROM loans
+       JOIN book_copies ON loans.copy_id = book_copies.copy_id
+       WHERE book_copies.book_id = ?
+       LIMIT 1`,
+      [bookId]
+    );
+
+    if (loanReferences.length > 0) {
+      await connection.rollback();
+      return res.status(409).json({
+        error: "This book cannot be removed because one or more of its copies have loan history."
+      });
+    }
+
+    await connection.query(
+      "DELETE FROM book_authors WHERE book_id = ?",
+      [bookId]
+    );
+    await connection.query(
+      "DELETE FROM book_copies WHERE book_id = ?",
+      [bookId]
+    );
+    await connection.query(
+      "DELETE FROM books WHERE book_id = ?",
+      [bookId]
+    );
+
+    await connection.commit();
+    res.json({ message: "Book and its copies were removed successfully." });
+  } catch (error) {
+    if (connection) await connection.rollback();
+
+    console.error("Could not remove book:", error.message);
+    res.status(500).json({ error: "Could not remove the book." });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
 app.post("/api/loans/:id/return", async (req, res) => {
   const loanId = Number(req.params.id);
   let connection;
@@ -233,6 +302,57 @@ app.get("/api/members", async (req, res) => {
   } catch (error) {
     console.error("Could not load members:", error.message);
     res.status(500).json({ error: "Could not load members." });
+  }
+});
+
+app.delete("/api/members/:id", async (req, res) => {
+  const memberId = Number(req.params.id);
+  let connection;
+
+  if (!Number.isInteger(memberId) || memberId < 1) {
+    return res.status(400).json({ error: "Invalid member ID." });
+  }
+
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [members] = await connection.query(
+      "SELECT member_id FROM members WHERE member_id = ? FOR UPDATE",
+      [memberId]
+    );
+
+    if (members.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: "Member not found." });
+    }
+
+    const [loanReferences] = await connection.query(
+      "SELECT loan_id FROM loans WHERE member_id = ? LIMIT 1",
+      [memberId]
+    );
+
+    if (loanReferences.length > 0) {
+      await connection.rollback();
+      return res.status(409).json({
+        error: "This member cannot be removed because they have loan history."
+      });
+    }
+
+    await connection.query(
+      "DELETE FROM members WHERE member_id = ?",
+      [memberId]
+    );
+
+    await connection.commit();
+    res.json({ message: "Member removed successfully." });
+  } catch (error) {
+    if (connection) await connection.rollback();
+
+    console.error("Could not remove member:", error.message);
+    res.status(500).json({ error: "Could not remove the member." });
+  } finally {
+    if (connection) connection.release();
   }
 });
 

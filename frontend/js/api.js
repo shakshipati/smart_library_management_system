@@ -286,6 +286,65 @@ async function addBook(book) {
 
   return data;
 }
+
+async function deleteBook(bookId) {
+  let response;
+  try {
+    response = await fetch(`${API_CONFIG.API_BASE_URL}/books/${encodeURIComponent(bookId)}`, {
+      method: "DELETE"
+    });
+  } catch (error) {
+    throw new Error(`Could not reach the library API. Check that the backend server is running. ${error.message}`);
+  }
+
+  const isJson = response.headers.get("content-type")?.includes("application/json");
+  const data = isJson ? await response.json().catch(() => ({})) : {};
+
+  if (!response.ok) {
+    if (response.status === 404 && !data.error) {
+      throw new Error("The book removal route was not found. Restart the backend server and reload the page.");
+    }
+    if (response.status === 409) {
+      throw new Error(data.error || "This book cannot be removed because it has loan history.");
+    }
+    if (response.status >= 500) {
+      throw new Error(`${data.error || "A server or database error occurred while removing the book."} Check the backend console for details.`);
+    }
+    throw new Error(data.error || `Could not remove book (Status: ${response.status})`);
+  }
+
+  return data;
+}
+
+async function deleteMember(memberId) {
+  let response;
+  try {
+    response = await fetch(`${API_CONFIG.API_BASE_URL}/members/${encodeURIComponent(memberId)}`, {
+      method: "DELETE"
+    });
+  } catch (error) {
+    throw new Error(`Could not reach the library API. Check that the backend server is running. ${error.message}`);
+  }
+
+  const isJson = response.headers.get("content-type")?.includes("application/json");
+  const data = isJson ? await response.json().catch(() => ({})) : {};
+
+  if (!response.ok) {
+    if (response.status === 404 && !data.error) {
+      throw new Error("The member removal route was not found. Restart the backend server and reload the page.");
+    }
+    if (response.status === 409) {
+      throw new Error(data.error || "This member cannot be removed because they have loan history.");
+    }
+    if (response.status >= 500) {
+      throw new Error(`${data.error || "A server or database error occurred while removing the member."} Check the backend console for details.`);
+    }
+    throw new Error(data.error || `Could not remove member (Status: ${response.status})`);
+  }
+
+  return data;
+}
+
 async function registerMember(member) {
   const response = await fetch(`${API_CONFIG.API_BASE_URL}/members`, {
     method: "POST",
@@ -316,6 +375,8 @@ window.LibraryAPI = {
   fetchAvailableCopies: fetchAvailableCopies,
   issueLoan: issueLoan,
   addBook: addBook,
+  deleteBook: deleteBook,
+  deleteMember: deleteMember,
   registerMember: registerMember,
   
   // Helpers for testing states easily

@@ -469,15 +469,16 @@
     Loading overdue loans...
   </p>
 
-  <div class="overdue-table-wrapper">
+  <div class="overdue-table-wrapper" role="region" aria-label="Overdue loans table" tabindex="0">
     <table class="overdue-table">
+      <caption class="visually-hidden">Currently overdue library loans</caption>
       <thead>
         <tr>
-          <th>Member</th>
-          <th>Book</th>
-          <th>Copy</th>
-          <th>Due date</th>
-          <th>Days overdue</th>
+          <th scope="col">Member</th>
+          <th scope="col">Book</th>
+          <th scope="col">Copy</th>
+          <th scope="col">Due date</th>
+          <th scope="col">Days overdue</th>
         </tr>
       </thead>
       <tbody id="overdueReportRows"></tbody>
@@ -533,6 +534,16 @@
       </button>
     </div>
   </form>
+</section>
+<section class="issue-card member-list-card" aria-labelledby="registeredMembersHeading">
+  <div class="view-header-text">
+    <h2 id="registeredMembersHeading">Registered Members</h2>
+    <p class="view-subtitle">Remove members only if they have no loan history.</p>
+  </div>
+  <p id="registeredMembersMessage" class="member-list-message" role="status" aria-live="polite">
+    Loading members...
+  </p>
+  <div id="registeredMembersList" class="registered-members-list"></div>
 </section>
       <!-- Action status notification banner -->
       <div id="issueFeedback" class="loan-feedback hidden" role="status" aria-live="polite"></div>

@@ -1,56 +1,54 @@
 /* ==========================================================================
    Smart Campus Library Management System - Stylesheet
-   Architecture: Modern CSS with Design Tokens, Flexbox, CSS Grid & Micro-animations
+   Architecture: Shared design tokens, responsive layouts, accessible controls
    ========================================================================== */
 
 /* --- 1. CSS Custom Properties (Design Tokens) --- */
 :root {
   /* Brand & Core Palette */
-  --primary: #4f46e5;         /* Indigo 600 */
-  --primary-hover: #4338ca;   /* Indigo 700 */
-  --primary-light: #eef2ff;   /* Indigo 50 */
-  --primary-glow: rgba(79, 70, 229, 0.18);
+  --primary: #654638;
+  --primary-hover: #50372c;
+  --primary-light: #f0e8dd;
+  --primary-glow: rgba(101, 70, 56, 0.16);
 
   /* Status Colors */
-  --success: #059669;         /* Emerald 600 */
-  --success-bg: #ecfdf5;      /* Emerald 50 */
-  --success-border: #a7f3d0;  /* Emerald 200 */
+  --success: #166534;
+  --success-bg: #ecfdf5;
+  --success-border: #a7f3d0;
   
-  --danger: #dc2626;          /* Red 600 */
-  --danger-bg: #fef2f2;       /* Red 50 */
-  --danger-border: #fecaca;   /* Red 200 */
+  --danger: #b91c1c;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
 
-  --warning: #d97706;         /* Amber 600 */
-  --warning-bg: #fffbeb;      /* Amber 50 */
-  --warning-border: #fde68a;  /* Amber 200 */
+  --warning: #92400e;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
 
-  /* Neutral Slate Palette */
-  --bg-main: #f8fafc;         /* Slate 50 */
-  --bg-surface: #ffffff;      /* White */
-  --bg-subtle: #f1f5f9;       /* Slate 100 */
-  --border-color: #e2e8f0;    /* Slate 200 */
-  --border-focus: #818cf8;    /* Indigo 400 */
+  /* Warm Neutral Palette */
+  --bg-main: #f6f1e8;
+  --bg-surface: #fffcf7;
+  --bg-subtle: #efe8dd;
+  --border-color: #e5d9c9;
+  --border-focus: #9a725c;
   
-  --text-main: #0f172a;       /* Slate 900 */
-  --text-muted: #64748b;      /* Slate 500 */
-  --text-light: #94a3b8;      /* Slate 400 */
+  --text-main: #2e261f;
+  --text-muted: #6d6257;
+  --text-light: #82766a;
 
   /* Typography & Radius */
   --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --radius-pill: 9999px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-hover: 0 16px 24px -4px rgba(79, 70, 229, 0.12), 0 8px 10px -4px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px rgba(46, 38, 31, 0.05);
+  --shadow-md: 0 3px 10px rgba(46, 38, 31, 0.07);
 
   /* Transitions */
   --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.18s ease;
 }
 
 /* --- 2. Base Reset & Typography --- */
@@ -60,11 +58,42 @@
   padding: 0;
 }
 
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+.table-wrapper:focus-visible,
+.overdue-table-wrapper:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 body {
   font-family: var(--font-family);
   background-color: var(--bg-main);
   color: var(--text-main);
   line-height: 1.5;
+  font-size: 0.9375rem;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   display: flex;
@@ -79,13 +108,12 @@ body {
   top: 0;
   z-index: 100;
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(10px);
 }
 
 .header-container {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 1rem 1.5rem;
+  padding: 0.85rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -99,15 +127,15 @@ body {
 }
 
 .brand-icon {
-  background: linear-gradient(135deg, var(--primary), #6366f1);
+  background: var(--primary);
   color: white;
   width: 48px;
   height: 48px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+  box-shadow: none;
   flex-shrink: 0;
 }
 
@@ -130,8 +158,8 @@ body {
   align-items: center;
   background: var(--bg-subtle);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 0.4rem 1rem;
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.85rem;
   gap: 1rem;
 }
 
@@ -160,6 +188,10 @@ body {
   color: var(--success) !important;
 }
 
+.text-warning {
+  color: var(--warning) !important;
+}
+
 .stat-divider {
   width: 1px;
   height: 24px;
@@ -169,23 +201,27 @@ body {
 /* --- 4. Main Content Layout --- */
 .main-content {
   flex: 1;
-  max-width: 1200px;
+  max-width: 1280px;
   width: 100%;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem;
 }
 
 /* --- 5. Search & Filter Controls --- */
 .catalogue-controls {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius-md);
+  padding: 1rem 1.15rem;
   box-shadow: var(--shadow-sm);
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.catalogue-management-section {
+  margin-bottom: 1.5rem;
 }
 
 .search-box {
@@ -205,13 +241,13 @@ body {
 
 .search-box input {
   width: 100%;
-  padding: 0.95rem 2.8rem 0.95rem 3rem;
+  padding: 0.7rem 2.6rem 0.7rem 2.75rem;
   font-family: inherit;
   font-size: 1rem;
   color: var(--text-main);
   background: var(--bg-main);
-  border: 1.5px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
   outline: none;
   transition: all var(--transition-normal);
 }
@@ -219,7 +255,7 @@ body {
 .search-box input:focus {
   background: var(--bg-surface);
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--primary-glow);
+  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
 .search-box input:focus + .search-icon,
@@ -271,7 +307,7 @@ body {
   border: 1px solid var(--border-color);
   color: var(--text-muted);
   padding: 0.45rem 1rem;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
@@ -288,7 +324,7 @@ body {
   background: var(--primary);
   border-color: var(--primary);
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+  box-shadow: none;
 }
 
 /* Demo State Buttons */
@@ -346,7 +382,7 @@ body {
 }
 
 .results-info h2 {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-main);
 }
@@ -357,35 +393,32 @@ body {
   font-size: 0.8rem;
   font-weight: 600;
   padding: 0.2rem 0.65rem;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
 }
 
 /* --- 7. Books Grid Layout --- */
 .books-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
 }
 
 /* --- 8. Book Card Component --- */
 .book-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  padding: 1rem;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
-  position: relative;
-  overflow: hidden;
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .book-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-hover);
-  border-color: rgba(79, 70, 229, 0.4);
+  box-shadow: var(--shadow-md);
+  border-color: #c9b7a4;
 }
 
 /* Category & Status Top Bar */
@@ -409,8 +442,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.3rem 0.75rem;
-  border-radius: var(--radius-pill);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -430,8 +463,6 @@ body {
 
 .status-available .status-dot {
   background: var(--success);
-  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25);
-  animation: pulse-dot 2s infinite ease-in-out;
 }
 
 /* Checked Out / Unavailable Status */
@@ -445,15 +476,9 @@ body {
   background: var(--warning);
 }
 
-@keyframes pulse-dot {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.3); opacity: 1; }
-  100% { transform: scale(0.95); opacity: 0.8; }
-}
-
 /* Book Body */
 .book-title {
-  font-size: 1.125rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--text-main);
   line-height: 1.35;
@@ -471,7 +496,7 @@ body {
   gap: 0.4rem;
   font-size: 0.875rem;
   color: var(--text-muted);
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.85rem;
 }
 
 .book-author svg {
@@ -481,14 +506,81 @@ body {
 
 /* Book Meta Info (ISBN & Location) */
 .book-meta {
-  background: var(--bg-main);
-  border-radius: var(--radius-md);
-  padding: 0.75rem 1rem;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0 0;
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  border: 1px solid var(--border-color);
+  gap: 0.35rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn-remove-book {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  background: var(--bg-surface);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.btn-remove-book:hover:not(:disabled) {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+
+.btn-remove-book:disabled {
+  color: var(--text-muted);
+  cursor: wait;
+}
+
+.registered-members-list {
+  width: 100%;
+}
+
+.member-list-message {
+  margin: 0.75rem 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.member-list-message.success {
+  color: var(--success);
+}
+
+.member-list-message.error {
+  color: var(--danger);
+}
+
+.btn-remove-member {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.75rem;
+  background: var(--bg-surface);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.btn-remove-member:hover:not(:disabled) {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+
+.btn-remove-member:disabled {
+  color: var(--text-muted);
+  cursor: wait;
 }
 
 .meta-row {
@@ -514,7 +606,7 @@ body {
   color: var(--primary);
   background: var(--primary-light);
   padding: 0.15rem 0.4rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 /* --- 9. State Views: Loading, Error, Empty --- */
@@ -533,17 +625,17 @@ body {
 /* Loading State & Skeletons */
 .loading-spinner-wrapper {
   text-align: center;
-  padding: 2rem 0;
+  padding: 1.5rem 0;
 }
 
 .spinner {
-  width: 44px;
-  height: 44px;
-  border: 4px solid var(--border-color);
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-color);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.85s linear infinite;
-  margin: 0 auto 1rem;
+  margin: 0 auto 0.75rem;
 }
 
 @keyframes spin {
@@ -574,35 +666,28 @@ body {
 }
 
 .skeleton-card {
-  height: 240px;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  height: 180px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
   border: 1px solid var(--border-color);
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
 }
 
 /* Empty & Error Cards */
 .state-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 3rem 2rem;
+  border-radius: var(--radius-md);
+  padding: 2rem 1.5rem;
   max-width: 500px;
   width: 100%;
   text-align: center;
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
   margin: 2rem auto;
 }
 
 .state-icon {
-  width: 72px;
-  height: 72px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -619,7 +704,7 @@ body {
 .empty-icon {
   background: var(--primary-light);
   color: var(--primary);
-  border: 1px solid rgba(79, 70, 229, 0.2);
+  border: 1px solid var(--border-color);
 }
 
 .state-title {
@@ -645,19 +730,18 @@ body {
   background: var(--primary);
   color: #ffffff;
   border: none;
-  border-radius: var(--radius-md);
-  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 1rem;
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
-  transition: all var(--transition-fast);
+  box-shadow: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .btn-primary:hover {
   background: var(--primary-hover);
-  transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -667,8 +751,8 @@ body {
   background: var(--bg-subtle);
   color: var(--text-main);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 1rem;
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 600;
@@ -678,6 +762,14 @@ body {
 
 .btn-secondary:hover {
   background: var(--border-color);
+}
+
+.toggle-icon {
+  transition: transform var(--transition-fast);
+}
+
+.toggle-icon.is-collapsed {
+  transform: rotate(180deg);
 }
 
 /* --- 10. Footer --- */
@@ -690,7 +782,7 @@ body {
 }
 
 .footer-container {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
@@ -743,21 +835,42 @@ body {
   }
 
   .books-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   }
 
-  .loan-card {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
+  .main-content {
+    padding: 1rem;
   }
 
-  .btn-return {
+  .nav-container {
+    overflow-x: auto;
+    gap: 0.15rem;
+  }
+
+  .nav-tab {
+    flex: 0 0 auto;
+    padding: 0.7rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .issue-card {
+    padding: 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .view-header {
+    align-items: flex-start;
+  }
+
+  .header-action-group {
     width: 100%;
   }
 
-  .loan-details {
-    gap: 0.75rem;
+  .header-action-group button {
+    flex: 1;
   }
 }
 
@@ -769,7 +882,7 @@ body {
 }
 
 .nav-container {
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
   display: flex;
   gap: 0.5rem;
@@ -779,7 +892,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.85rem 1.25rem;
+  padding: 0.7rem 1rem;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -830,7 +943,7 @@ body {
 }
 
 .view-header-text h2 {
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--text-main);
   letter-spacing: -0.01em;
@@ -849,7 +962,7 @@ body {
 
 /* --- 14. Action Feedback Banner --- */
 .loan-feedback {
-  padding: 0.85rem 1.25rem;
+  padding: 0.7rem 0.9rem;
   border-radius: var(--radius-md);
   margin-bottom: 1.5rem;
   font-size: 0.9rem;
@@ -857,7 +970,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  animation: fadeIn 0.2s ease-in-out;
+  animation: none;
 }
 
 .loan-feedback.success {
@@ -872,44 +985,18 @@ body {
   color: var(--danger);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 /* --- 15. Loans List & Loan Cards --- */
 .loans-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.loan-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 1.25rem 1.5rem;
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1.5rem;
-  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
-}
-
-.loan-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(79, 70, 229, 0.3);
+  width: 100%;
 }
 
 .overdue-report-card {
   margin-top: 1.5rem;
-  padding: 1.25rem 1.5rem;
+  padding: 1rem;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  box-shadow: none;
 }
 
 .overdue-report-card h3 {
@@ -924,98 +1011,26 @@ body {
   font-size: 0.875rem;
 }
 
+.overdue-report-card #overdueReportMessage.error {
+  color: var(--danger);
+}
+
 .overdue-table-wrapper {
   margin-top: 0.75rem;
   overflow-x: auto;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-}
-
-.overdue-table {
-  width: 100%;
-  min-width: 600px;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.875rem;
-}
-
-.overdue-table th,
-.overdue-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.overdue-table th {
-  background: var(--bg-subtle);
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.overdue-table td {
-  color: var(--text-main);
-}
-
-.overdue-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.overdue-table tbody tr:nth-child(even) {
-  background: var(--bg-main);
-}
-
-.loan-main-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.loan-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.loan-book-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-main);
-  line-height: 1.3;
 }
 
 .copy-badge {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #1e40af;
-  background: #dbeafe;
-  border: 1px solid #bfdbfe;
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-}
-
-.loan-details {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.loan-detail-item {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.loan-detail-item svg {
-  color: var(--text-light);
-  flex-shrink: 0;
+  color: var(--text-main);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  margin-left: 0.35rem;
 }
 
 .due-pill {
@@ -1039,18 +1054,18 @@ body {
 
 /* Return Action Button */
 .btn-return {
-  background: var(--primary);
-  color: #ffffff;
-  border: none;
-  border-radius: var(--radius-md);
-  padding: 0.65rem 1.35rem;
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.7rem;
   font-family: inherit;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
-  transition: all var(--transition-fast);
+  box-shadow: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1058,17 +1073,113 @@ body {
 }
 
 .btn-return:hover:not(:disabled) {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+  background: #d9f0e3;
+  border-color: #70b88c;
 }
 
 .btn-return:disabled {
-  background: var(--text-light);
+  background: var(--bg-subtle);
+  color: var(--text-light);
   cursor: not-allowed;
-  transform: none;
   box-shadow: none;
-  opacity: 0.75;
+}
+
+/* Shared operational tables */
+.table-wrapper,
+.overdue-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  -webkit-overflow-scrolling: touch;
+}
+
+.data-table,
+.overdue-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.loans-table {
+  min-width: 720px;
+}
+
+.members-table {
+  min-width: 440px;
+}
+
+.overdue-table {
+  min-width: 600px;
+}
+
+.data-table th,
+.data-table td,
+.overdue-table th,
+.overdue-table td {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.data-table th,
+.overdue-table th {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.data-table td,
+.overdue-table td {
+  color: var(--text-main);
+}
+
+.overdue-table td:last-child {
+  color: var(--danger);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.data-table tbody tr:nth-child(even),
+.overdue-table tbody tr:nth-child(even) {
+  background: #fcf8f1;
+}
+
+.data-table tbody tr:hover,
+.overdue-table tbody tr:hover {
+  background: var(--primary-light);
+}
+
+.data-table tbody tr:last-child td,
+.overdue-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table .member-name,
+.table-primary-text {
+  font-weight: 600;
+}
+
+.table-primary-text {
+  display: inline-block;
+  max-width: 22rem;
+  vertical-align: middle;
+}
+
+.table-action-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.data-table caption,
+.overdue-table caption {
+  caption-side: top;
 }
 
 /* --- 16. Issue a Book Section & Form --- */
@@ -1081,18 +1192,66 @@ body {
 .issue-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-  box-shadow: var(--shadow-sm);
-  max-width: 800px;
-  margin: 0 auto;
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: none;
+  max-width: 960px;
+  margin: 0 auto 1rem;
+}
+
+.management-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.1rem;
+}
+
+.management-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.management-header-title {
+  min-width: 0;
+}
+
+.management-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.management-title {
+  margin-top: 0.3rem;
+  color: var(--text-main);
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+
+.management-subtitle {
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.management-form-container {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .form-group {
@@ -1105,7 +1264,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-main);
 }
@@ -1114,36 +1273,56 @@ body {
   color: var(--primary);
 }
 
-.form-select {
+.form-select,
+.form-input,
+.form-textarea {
   width: 100%;
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.75rem;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--text-main);
-  background: var(--bg-main);
-  border: 1.5px solid var(--border-color);
-  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
   outline: none;
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-select {
   cursor: pointer;
 }
 
-.form-select:focus {
-  background: var(--bg-surface);
+.form-select:focus,
+.form-input:focus,
+.form-textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--primary-glow);
+  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
-.form-select:disabled {
+.form-select:disabled,
+.form-input:disabled,
+.form-textarea:disabled {
   background: var(--bg-subtle);
   color: var(--text-light);
   cursor: not-allowed;
   border-color: var(--border-color);
 }
 
+.form-textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.form-input:focus:invalid,
+.form-select:focus:invalid {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+
 .form-hint {
   font-size: 0.775rem;
   color: var(--text-muted);
+  line-height: 1.4;
 }
 
 /* Alert banner inside form when no copies available */
@@ -1151,9 +1330,9 @@ body {
   background: var(--warning-bg);
   border: 1px solid var(--warning-border);
   color: var(--warning);
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius-md);
-  margin-bottom: 1.5rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
@@ -1204,6 +1383,67 @@ body {
 .form-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.65rem;
   flex-wrap: wrap;
+}
+
+@media (max-width: 540px) {
+  .header-container {
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .brand {
+    gap: 0.65rem;
+  }
+
+  .brand-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .brand-text h1 {
+    font-size: 1.1rem;
+  }
+
+  .brand-tagline {
+    font-size: 0.75rem;
+  }
+
+  .catalogue-stats {
+    gap: 0.5rem;
+    padding: 0.4rem 0.55rem;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+  }
+
+  .management-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .management-header > button {
+    align-self: flex-start;
+  }
+
+  .books-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .overdue-report-card {
+    padding: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
