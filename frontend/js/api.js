@@ -19,7 +19,7 @@ const API_CONFIG = {
   USE_MOCK_DATA: false,
 
   // Target API endpoint for Express server (GET /api/books)
-  API_BASE_URL: 'http://localhost:3000/api',
+  API_BASE_URL: '/api',
 
   // Simulated delay in milliseconds (for test buttons)
   SIMULATED_DELAY_MS: 400,
